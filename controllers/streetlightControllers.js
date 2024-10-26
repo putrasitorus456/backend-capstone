@@ -36,7 +36,7 @@ const createStreetlight = async (req, res) => {
     const savedStreetlight = await newStreetlight.save();
 
     try {
-      const eventResponse = await axios.post('http://localhost:5000/api/events', {
+      const eventResponse = await axios.post('https://pju-backend.vercel.app/api/events', {
         anchor_code,
         streetlight_code,
         last_status: 0

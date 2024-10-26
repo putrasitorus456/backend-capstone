@@ -70,7 +70,7 @@ const createNotification = async (req, res) => {
       }
 
       try {
-        const eventResponse = await axios.put(`http://localhost:5000/api/events/${anchor_code}/${streetlight_code}`, {
+        const eventResponse = await axios.put(`https://pju-backend.vercel.app/api/events/${anchor_code}/${streetlight_code}`, {
           last_status: status
         });
       } catch (apiError) {

@@ -70,7 +70,7 @@ const createResponse = async (req, res) => {
 
     if (type === 0) {
       try {
-      const repairResponse = await axios.put(`http://localhost:5000/api/events/${anchor_code}/${streetlight_code}`, {
+      const repairResponse = await axios.put(`https://pju-backend.vercel.app/api/events/${anchor_code}/${streetlight_code}`, {
         problem : problem,
       });
       console.log('Repair API response:', repairResponse.data);
@@ -79,7 +79,7 @@ const createResponse = async (req, res) => {
       }
     } else if (type === 1) {
       try {
-        const repairResponse = await axios.put(`http://localhost:5000/api/events/${anchor_code}/${streetlight_code}`, {
+        const repairResponse = await axios.put(`https://pju-backend.vercel.app/api/events/${anchor_code}/${streetlight_code}`, {
           problem : '',
         });
         console.log('Repair API response:', repairResponse.data);
@@ -90,7 +90,7 @@ const createResponse = async (req, res) => {
 
     if (type === 0) {
       try {
-        const messageResponse = await axios.post('http://localhost:5000/api/message', {
+        const messageResponse = await axios.post('https://pju-backend.vercel.app/api/message', {
           anchor_code,
           streetlight_code,
           problem,
