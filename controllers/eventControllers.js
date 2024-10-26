@@ -36,7 +36,7 @@ const createEvent = async (req, res) => {
 
 const updateEvent = async (req, res) => {
   const { anchor_code, streetlight_code } = req.params;
-  const { problem, last_status} = req.body;
+  const { problem, last_status, repaired_yet} = req.body;
 
   if (!anchor_code || !streetlight_code) {
     return res.status(400).json({ message: 'Missing required data' });
@@ -48,6 +48,7 @@ const updateEvent = async (req, res) => {
       {
         problem: problem || '',
         last_status: last_status || 0,
+        repaired_yet: repaired_yet || 0
       },
       { new: true }
     );

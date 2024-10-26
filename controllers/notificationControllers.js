@@ -1,6 +1,7 @@
 const axios = require('axios');
 const Notification = require('../models/notification');
 const Streetlight = require('../models/streetlight');
+const dotenv = require('dotenv');
 
 const getAllNotification = async (req, res) => {
   try {
@@ -69,8 +70,8 @@ const createNotification = async (req, res) => {
         console.error('Error updating streetlight status:', updateError.message);
       }
 
-      try {
-        const eventResponse = await axios.put(`https://pju-backend.vercel.app/api/events/${anchor_code}/${streetlight_code}`, {
+      try { // kalo jalanin di local, tinggal ganti URL_PROD jadi URL_LOCAL
+        const eventResponse = await axios.put(`${process.env.URL_PROD}/events/${anchor_code}/${streetlight_code}`, {
           last_status: status
         });
       } catch (apiError) {

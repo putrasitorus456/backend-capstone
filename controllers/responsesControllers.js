@@ -25,8 +25,8 @@ const getResponseById = async (req, res) => {
 };
 
 const sendMessage = async (anchor_code, streetlight_code, problem, location) => {
-  try {
-    const messageResponse = await axios.post('https://pju-backend.vercel.app/api/message', {
+  try { // kalo jalanin di local, tinggal ganti URL_PROD jadi URL_LOCAL
+    const messageResponse = await axios.post(`${process.env.URL_PROD}/api/message`, {
       anchor_code,
       streetlight_code,
       problem,
@@ -51,8 +51,8 @@ const updateStreetlightCondition = async (anchor_code, streetlight_code, conditi
 };
 
 const updateEvent = async (anchor_code, streetlight_code, problem, repaired_yet) => {
-  try {
-    const repairResponse = await axios.put(`https://pju-backend.vercel.app/api/events/${anchor_code}/${streetlight_code}`, {
+  try { // kalo jalanin di local, tinggal ganti URL_PROD jadi URL_LOCAL
+    const repairResponse = await axios.put(`${process.env.URL_PROD}/api/events/${anchor_code}/${streetlight_code}`, {
       problem,
       repaired_yet,
     });
