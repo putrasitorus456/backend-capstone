@@ -50,7 +50,7 @@ const updateStreetlightCondition = async (anchor_code, streetlight_code, conditi
   }
 };
 
-const updateEvent = async (anchor_code, streetlight_code, problem) => {
+const updateEvent = async (anchor_code, streetlight_code, problem, repaired_yet) => {
   try {
     const repairResponse = await axios.put(`https://pju-backend.vercel.app/api/events/${anchor_code}/${streetlight_code}`, {
       problem,

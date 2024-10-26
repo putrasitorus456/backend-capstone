@@ -53,7 +53,6 @@ const handleTelegramCallbackQuery = async (req, res) => {
 
     const confirmMessage = `Perbaikan pada lampu dengan kode anchor: ${anchor_code} dan kode lampu: ${streetlight_code} telah dimulai.`;
 
-    // Update pesan dengan tombol "Selesai Perbaikan"
     const replyMarkup = {
       inline_keyboard: [
         [
