@@ -5,7 +5,6 @@ const TELEGRAM_API_URL = 'https://api.telegram.org/bot';
 const TELEGRAM_BOT_TOKEN = '8145457978:AAFTNtPFHIzN9Xh8XMYey8tblCEMjBMErfM';
 const CHAT_ID = '-1002364357380';
 
-// Mengirimkan pesan dengan tombol interaktif
 const sendRepairNotification = async (anchor_code, streetlight_code, problem, location) => {
   const [latitude, longitude] = location;
   const googleMapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
@@ -36,7 +35,6 @@ const sendRepairNotification = async (anchor_code, streetlight_code, problem, lo
   }
 };
 
-// Fungsi untuk menangani callback query dari tombol
 const handleTelegramCallbackQuery = async (req, res) => {
   const callbackQuery = req.body.callback_query;
   if (!callbackQuery || !callbackQuery.data) {
@@ -48,7 +46,6 @@ const handleTelegramCallbackQuery = async (req, res) => {
   const [action, anchor_code, streetlight_code] = callbackQuery.data.split('|');
 
   if (action === 'start_repair') {
-    // Update status perbaikan menjadi sedang diperbaiki
     await Event.findOneAndUpdate(
       { anchor_code, streetlight_code },
       { repaired_yet: 1 }
@@ -56,7 +53,6 @@ const handleTelegramCallbackQuery = async (req, res) => {
 
     const confirmMessage = `Perbaikan pada lampu dengan kode anchor: ${anchor_code} dan kode lampu: ${streetlight_code} telah dimulai.`;
 
-    // Kirim pesan konfirmasi dengan tombol untuk menyelesaikan perbaikan
     const replyMarkup = {
       inline_keyboard: [
         [
@@ -74,7 +70,6 @@ const handleTelegramCallbackQuery = async (req, res) => {
       reply_markup: replyMarkup,
     });
   } else if (action === 'finish_repair') {
-    // Update status perbaikan menjadi selesai
     await Event.findOneAndUpdate(
       { anchor_code, streetlight_code },
       { repaired_yet: 2 }
@@ -87,11 +82,9 @@ const handleTelegramCallbackQuery = async (req, res) => {
     });
   }
 
-  // Kirim respon ok ke Telegram
   res.sendStatus(200);
 };
 
-// Fungsi untuk memulai pengiriman pesan dari endpoint
 const sendMessage = async (req, res) => {
   const { anchor_code, streetlight_code, problem, location } = req.body;
 

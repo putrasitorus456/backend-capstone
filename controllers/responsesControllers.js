@@ -75,14 +75,12 @@ const createResponse = async (req, res) => {
 
   const { location } = existingStreetlight;
 
-  // Define message title and body based on `type`
   const title = type === 0 ? 'Pemberitahuan Permasalahan Lampu' : 'Pemberitahuan Perbaikan Lampu';
   const body = type === 0
     ? `Terdeteksi permasalahan ${problem} untuk lampu ${anchor_code}${streetlight_code}. Segera kirimkan petugas untuk perbaikan.`
     : `Perbaikan lampu ${anchor_code}${streetlight_code}, dengan permasalahan ${problem}, telah selesai dilakukan. Lampu telah dapat menyala dan komunikasi berjalan baik.`;
 
   try {
-    // Save response to the database
     const newResponse = new Responses({
       sender: 'Sistem',
       title,
@@ -90,20 +88,16 @@ const createResponse = async (req, res) => {
     });
     const savedResponse = await newResponse.save();
 
-    // Update streetlight condition in the database
     const condition = type === 0 ? 0 : 1;
     await updateStreetlightCondition(anchor_code, streetlight_code, condition);
 
-    // Update event and send message if `type` is 0
     if (type === 0) {
       await updateEvent(anchor_code, streetlight_code, problem);
       await sendMessage(anchor_code, streetlight_code, problem, location);
     } else {
-      // Clear problem for `type` 1 (repair completed)
       await updateEvent(anchor_code, streetlight_code, '');
     }
 
-    // Send success response
     res.status(201).json(savedResponse);
 
   } catch (error) {
