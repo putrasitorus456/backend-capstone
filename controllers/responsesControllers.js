@@ -54,6 +54,7 @@ const updateEvent = async (anchor_code, streetlight_code, problem) => {
   try {
     const repairResponse = await axios.put(`https://pju-backend.vercel.app/api/events/${anchor_code}/${streetlight_code}`, {
       problem,
+      repaired_yet,
     });
     console.log('Repair API response:', repairResponse.data);
   } catch (apiError) {
@@ -92,10 +93,10 @@ const createResponse = async (req, res) => {
     await updateStreetlightCondition(anchor_code, streetlight_code, condition);
 
     if (type === 0) {
-      await updateEvent(anchor_code, streetlight_code, problem);
+      await updateEvent(anchor_code, streetlight_code, problem, 0);
       await sendMessage(anchor_code, streetlight_code, problem, location);
     } else {
-      await updateEvent(anchor_code, streetlight_code, '');
+      await updateEvent(anchor_code, streetlight_code, '', 0);
     }
 
     res.status(201).json(savedResponse);

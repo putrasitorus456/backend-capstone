@@ -53,6 +53,7 @@ const handleTelegramCallbackQuery = async (req, res) => {
 
     const confirmMessage = `Perbaikan pada lampu dengan kode anchor: ${anchor_code} dan kode lampu: ${streetlight_code} telah dimulai.`;
 
+    // Update pesan dengan tombol "Selesai Perbaikan"
     const replyMarkup = {
       inline_keyboard: [
         [
@@ -64,10 +65,16 @@ const handleTelegramCallbackQuery = async (req, res) => {
       ],
     };
 
+    await axios.post(`${TELEGRAM_API_URL}${TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`, {
+      chat_id: chatId,
+      message_id: messageId,
+      reply_markup: replyMarkup,
+    });
+
+    // Kirim pesan konfirmasi
     await axios.post(`${TELEGRAM_API_URL}${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       chat_id: chatId,
       text: confirmMessage,
-      reply_markup: replyMarkup,
     });
   } else if (action === 'finish_repair') {
     await Event.findOneAndUpdate(
@@ -76,6 +83,15 @@ const handleTelegramCallbackQuery = async (req, res) => {
     );
 
     const finishMessage = `Perbaikan pada lampu dengan kode anchor: ${anchor_code} dan kode lampu: ${streetlight_code} telah selesai dan akan diverifikasi.`;
+
+    // Hapus tombol inline keyboard
+    await axios.post(`${TELEGRAM_API_URL}${TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`, {
+      chat_id: chatId,
+      message_id: messageId,
+      reply_markup: { inline_keyboard: [] },
+    });
+
+    // Kirim pesan akhir konfirmasi
     await axios.post(`${TELEGRAM_API_URL}${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       chat_id: chatId,
       text: finishMessage,
