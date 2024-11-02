@@ -1,6 +1,7 @@
 const axios = require('axios');
 const Notification = require('../models/notification');
 const Streetlight = require('../models/streetlight');
+const Event = require('../models/event');
 const dotenv = require('dotenv');
 
 const getAllNotification = async (req, res) => {
@@ -12,9 +13,13 @@ const getAllNotification = async (req, res) => {
   }
 };
 
-const getNotificationById = async (req, res) => {
+const getNotificationByCode = async (req, res) => {
+  const { anchor_code, streetlight_code } = req.params;
+  const searchQuery = `${anchor_code}${streetlight_code}`;
   try {
-    const notification = await Notification.findById(req.params.id);
+    const notification = await Notification.find({
+      title: { $regex: searchQuery, $options: 'i' }
+    });
     if (notification) {
       res.json(notification);
     } else {
@@ -70,12 +75,14 @@ const createNotification = async (req, res) => {
         console.error('Error updating streetlight status:', updateError.message);
       }
 
-      try { // kalo jalanin di local, tinggal ganti URL_PROD jadi URL_LOCAL
-        const eventResponse = await axios.put(`${process.env.URL_PROD}/events/${anchor_code}/${streetlight_code}`, {
-          last_status: status
-        });
-      } catch (apiError) {
-        console.error('Error calling event API:', apiError.message);
+      try {
+        await Event.findOneAndUpdate(
+          { anchor_code, streetlight_code },
+          { last_status: status }
+        );
+        console.log(`Event of streetlight ${anchor_code}${streetlight_code} updated to ${status}`);
+      } catch (updateError) {
+        console.error('Error updating event status:', updateError.message);
       }
     }
 
@@ -93,6 +100,6 @@ const createNotification = async (req, res) => {
 
 module.exports = {
   getAllNotification,
-  getNotificationById,
+  getNotificationByCode,
   createNotification,
 };
