@@ -10,7 +10,7 @@ const getEvents = async (req, res) => {
 };
 
 const createEvent = async (req, res) => {
-  const { anchor_code, streetlight_code, problem, repaired_yet, last_status, reported_by } = req.body;
+  const { anchor_code, streetlight_code, location, problem, repaired_yet, last_status, reported_by } = req.body;
 
   if (!anchor_code || typeof last_status !== 'number') {
     return res.status(400).json({ message: 'Missing required fields' });
@@ -20,6 +20,7 @@ const createEvent = async (req, res) => {
     const newEvent = new Event({
       anchor_code,
       streetlight_code,
+      location,
       problem: problem || '',
       repaired_yet: repaired_yet || 0,
       last_status,

@@ -39,6 +39,7 @@ const createStreetlight = async (req, res) => {
       const eventResponse = await axios.post(`${process.env.URL_PROD}/api/events`, {
         anchor_code,
         streetlight_code,
+        location,
         last_status: 0
       });
     } catch (apiError) {
