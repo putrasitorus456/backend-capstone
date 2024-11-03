@@ -1,5 +1,6 @@
 const axios = require('axios');
 const Streetlight = require('../models/streetlight');
+const Event = require('../models/event');
 
 const createStreetlight = async (req, res) => {
   try {
@@ -109,15 +110,22 @@ const updateStreetlight = async (req, res) => {
 
 const deleteStreetlight = async (req, res) => {
   try {
+    // Menghapus streetlight berdasarkan id
     const deletedStreetlight = await Streetlight.findByIdAndDelete(req.params.id);
 
     if (!deletedStreetlight) {
       return res.status(404).json({ message: 'Streetlight not found' });
     }
 
-    res.status(200).json({ message: 'Streetlight deleted' });
+    // Menghapus event yang memiliki anchor_code dan streetlight_code yang sama
+    await Event.deleteOne({
+      anchor_code: deletedStreetlight.anchor_code,
+      streetlight_code: deletedStreetlight.streetlight_code
+    });
+
+    res.status(200).json({ message: 'Streetlight and related events deleted' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting streetlight', error: error.message });
+    res.status(500).json({ message: 'Error deleting streetlight and events', error: error.message });
   }
 };
 
