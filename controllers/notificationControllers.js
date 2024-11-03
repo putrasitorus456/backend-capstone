@@ -98,8 +98,36 @@ const createNotification = async (req, res) => {
   }
 };
 
+const getCombinedData = async (req, res) => {
+  try {
+    const notifications = await Notification.find();
+    const streetlights = await Streetlight.find();
+
+    const combinedData = notifications.map(notification => {
+      const match = notification.title.match(/Lampu (\w+)(\w+)/);
+      if (match) {
+        const anchor_code = match[1];
+        const streetlight_code = match[2];
+
+        const streetlight = streetlights.find(sl => sl.anchor_code === anchor_code && sl.streetlight_code === streetlight_code);
+
+        return {
+          ...notification.toObject(),
+          ...(streetlight ? streetlight.toObject() : {}),
+        };
+      }
+      return notification.toObject();
+    });
+
+    res.json(combinedData);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
 module.exports = {
   getAllNotification,
   getNotificationByCode,
   createNotification,
+  getCombinedData,
 };
