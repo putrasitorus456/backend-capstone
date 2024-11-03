@@ -1,8 +1,10 @@
 const express = require('express');
-const { getAllResponses, getResponseById, createResponse } = require('../controllers/responsesControllers');
+const { getAllResponses, getResponseById, createResponse, getCombinedData } = require('../controllers/responsesControllers');
 const router = express.Router();
 
 router.get('/', getAllResponses);
+
+router.get('/combined', getCombinedData);
 
 router.get('/:id', getResponseById);
 

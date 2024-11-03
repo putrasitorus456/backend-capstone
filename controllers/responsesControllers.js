@@ -107,8 +107,42 @@ const createResponse = async (req, res) => {
   }
 };
 
+const getCombinedData = async (req, res) => {
+  try {
+    const responses = await Responses.find();
+    const streetlights = await Streetlight.find();
+
+    const combinedData = responses.map(response => {
+      // Mencari pola huruf dan angka seperti C1, A2, dll.
+      const match = response.body.match(/\b([A-Z])(\d+)\b/);
+
+      if (match) {
+        const anchor_code = match[1]; // Bagian huruf sebagai anchor_code
+        const streetlight_code = match[2]; // Bagian angka sebagai streetlight_code
+
+        // Mencari streetlight yang cocok dengan anchor_code dan streetlight_code
+        const streetlight = streetlights.find(sl => 
+          sl.anchor_code === anchor_code && sl.streetlight_code === streetlight_code
+        );
+
+        return {
+          ...response.toObject(),
+          ...(streetlight ? streetlight.toObject() : {}),
+        };
+      }
+      
+      return response.toObject();
+    });
+
+    res.json(combinedData);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
 module.exports = {
   getAllResponses,
   getResponseById,
   createResponse,
+  getCombinedData,
 };
