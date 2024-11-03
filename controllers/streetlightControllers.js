@@ -82,6 +82,7 @@ const updateStreetlight = async (req, res) => {
       return res.status(400).json({ message: 'Anchor code required' });
     }
 
+    // Cek apakah sudah ada streetlight lain dengan anchor_code dan streetlight_code yang sama, kecuali yang sedang diupdate
     const existingStreetlight = await Streetlight.findOne({
       anchor_code,
       streetlight_code,
@@ -92,19 +93,33 @@ const updateStreetlight = async (req, res) => {
       return res.status(400).json({ message: 'Streetlight already exists' });
     }
 
+    // Ambil streetlight yang akan diperbarui
+    const streetlightToUpdate = await Streetlight.findById(req.params.id);
+    
+    if (!streetlightToUpdate) {
+      return res.status(404).json({ message: 'Streetlight not found' });
+    }
+
+    // Simpan streetlight_code yang lama untuk digunakan dalam pembaruan event
+    const oldAnchorCode = streetlightToUpdate.anchor_code;
+    const oldStreetlightCode = streetlightToUpdate.streetlight_code;
+
+    // Update streetlight
     const updatedStreetlight = await Streetlight.findByIdAndUpdate(
       req.params.id,
       { anchor_code, streetlight_code, nodes, location, installed_yet, condition, status },
       { new: true }
     );
 
-    if (!updatedStreetlight) {
-      return res.status(404).json({ message: 'Streetlight not found' });
-    }
+    // Update event yang memiliki anchor_code dan streetlight_code yang sama dengan yang lama
+    await Event.updateMany(
+      { anchor_code: oldAnchorCode, streetlight_code: oldStreetlightCode },
+      { anchor_code: updatedStreetlight.anchor_code, streetlight_code: updatedStreetlight.streetlight_code }
+    );
 
     res.status(200).json(updatedStreetlight);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating streetlight', error: error.message });
+    res.status(500).json({ message: 'Error updating streetlight and related events', error: error.message });
   }
 };
 
