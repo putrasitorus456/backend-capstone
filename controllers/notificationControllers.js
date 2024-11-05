@@ -45,39 +45,36 @@ const createNotification = async (req, res) => {
     return res.status(400).json({ message: 'All fields are required' });
   }
 
-  let existingStreetlights;
   try {
-    // Cari semua lampu yang memiliki anchor_code yang sama
+    // Cari lampu yang sesuai dengan kriteria input
     const query = streetlight_code ? 
       { anchor_code, streetlight_code } : 
-      { anchor_code, streetlight_code: { $exists: true } }; // Memastikan streetlight_code ada untuk lampu yang relevan
-    existingStreetlights = await Streetlight.find({ anchor_code });
+      { anchor_code, streetlight_code: { $exists: false } }; // Memastikan hanya mengambil lampu tanpa streetlight_code jika tidak diberikan
+
+    const existingStreetlights = await Streetlight.find(query);
 
     if (!existingStreetlights || existingStreetlights.length === 0) {
-      return res.status(404).json({ message: 'No streetlights found for the provided anchor_code.' });
+      return res.status(404).json({ message: 'No streetlights found matching the criteria.' });
     }
-  } catch (error) {
-    return res.status(500).json({ message: 'Error fetching streetlights', error: error.message });
-  }
 
-  // Membuat notifikasi untuk setiap streetlight
-  try {
+    // Membuat notifikasi untuk setiap streetlight yang ditemukan
     const notifications = await Promise.all(
       existingStreetlights.map(async (streetlight) => {
-        // Menyusun judul dengan anchor_code dan streetlight_code jika ada
         let title;
+        const lightCode = streetlight.streetlight_code ? `${streetlight.streetlight_code}` : '';
+        
         switch (type) {
           case 0:
-            title = `Lampu ${anchor_code}${streetlight.streetlight_code ? + streetlight.streetlight_code : ''} telah dimatikan`;
+            title = `Lampu ${anchor_code}${lightCode} telah dimatikan`;
             break;
           case 1:
-            title = `Lampu ${anchor_code}${streetlight.streetlight_code ? + streetlight.streetlight_code : ''} telah dinyalakan`;
+            title = `Lampu ${anchor_code}${lightCode} telah dinyalakan`;
             break;
           case 2:
-            title = `Lampu ${anchor_code}${streetlight.streetlight_code ? + streetlight.streetlight_code : ''} tidak dapat dimatikan`;
+            title = `Lampu ${anchor_code}${lightCode} tidak dapat dimatikan`;
             break;
           case 3:
-            title = `Lampu ${anchor_code}${streetlight.streetlight_code ? + streetlight.streetlight_code : ''} tidak dapat dinyalakan`;
+            title = `Lampu ${anchor_code}${lightCode} tidak dapat dinyalakan`;
             break;
           default:
             return res.status(400).json({ message: 'Invalid type provided.' });
@@ -87,28 +84,23 @@ const createNotification = async (req, res) => {
           sender: 'Sistem',
           title,
         });
-        const savedNotification = await newNotification.save();
-
-        return savedNotification;
+        return await newNotification.save();
       })
     );
 
-    // Jika type adalah 0 atau 1, update status semua streetlight
+    // Jika type adalah 0 atau 1, update status untuk semua streetlight yang sesuai
     if (type === 0 || type === 1) {
       const status = type === 0 ? 0 : 1;
-
-      try {
-        await Streetlight.updateMany({ anchor_code }, { status });
-        await Event.updateMany({ anchor_code }, { last_status: status });
-        console.log(`Status of all streetlights and events with anchor_code ${anchor_code} updated to ${status}`);
-      } catch (updateError) {
-        console.error('Error updating streetlight or event status:', updateError.message);
-      }
-    } else if (type === 2) {
-      console.log(`Issue with turning off lamps with anchor_code ${anchor_code}`);
-    } else if (type === 3) {
-      console.log(`Issue with turning on lamps with anchor_code ${anchor_code}`);
-    }
+    
+      // Definisikan eventUpdate sebagai objek pencarian yang sesuai dengan anchor_code dan streetlight_code (jika ada)
+      const eventUpdate = streetlight_code 
+        ? { anchor_code, streetlight_code } 
+        : { anchor_code };
+    
+      // Update status di Streetlight dan Event berdasarkan kriteria pencarian yang ada di query dan eventUpdate
+      await Streetlight.updateOne(query, { status });
+      await Event.updateOne(eventUpdate, { last_status: status });
+    }    
 
     res.status(201).json(notifications);
   } catch (error) {
@@ -119,7 +111,7 @@ const createNotification = async (req, res) => {
 const getCombinedData = async (req, res) => {
   try {
     const notifications = await Notification.find();
-    const streetlights = await Streetlight.find();
+    const streetlights = await Streetlight.find().select('-date');
 
     const combinedData = notifications.map(notification => {
       const match = notification.title.match(/Lampu ([A-Z]+)(\d*)/);

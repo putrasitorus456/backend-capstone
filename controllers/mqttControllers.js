@@ -1,5 +1,6 @@
 const mqtt = require('mqtt');
 const dotenv = require('dotenv');
+const axios = require('axios');
 
 dotenv.config();
 
@@ -66,7 +67,7 @@ const publishTurnOn = async (req, res) => {
   let responseReceived = false;
   const timeout = setTimeout(() => {
     if (!responseReceived) {
-      res.status(504).json({ message: 'Timeout: No response from control within 1.5 minutes' });
+      res.status(504).json({ message: 'Timeout: No response from control within 1 minute' });
     }
   }, 60 * 1000);
 
@@ -85,17 +86,51 @@ const publishTurnOn = async (req, res) => {
       }
     });
 
-    client.on('message', (topic, message) => {
+    client.on('message', async (topic, message) => {
       if (topic === 'PJU-Response') {
         clearTimeout(timeout);
         responseReceived = true;
-        res.status(200).json({ message: 'Response received from control', data: message.toString() });
-        // client.unsubscribe('PJU-Response');
+
+        const responseData = message.toString();
+        const dataParts = responseData.split('-');
+        
+        if (dataParts.length < 4) {
+          return res.status(500).json({ message: 'Invalid response format' });
+        }
+
+        const [prefix, blockNumber, anchorCode, statusString] = dataParts;
+        const anchorStatus = parseInt(statusString.charAt(0));
+        const nodeStatuses = statusString.slice(1).split('').map(Number);
+
+        await sendNotification(anchorStatus, anchorCode);
+
+        for (let i = 0; i < nodeStatuses.length; i++) {
+          const streetlightCode = i + 1;
+          await sendNotification(nodeStatuses[i], anchorCode, streetlightCode);
+        }
+
+        res.status(200).json({ message: 'Response received from control', data: responseData });
       }
     });
   } catch (error) {
     clearTimeout(timeout);
     res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+const sendNotification = async (status, anchorCode, streetlightCode = null) => {
+  const type = status === 1 ? 1 : 3;
+
+  const notificationData = {
+    type,
+    anchor_code: anchorCode,
+    ...(streetlightCode && { streetlight_code: streetlightCode })
+  };
+
+  try {
+    await axios.post('https://pju-backend.vercel.app/api/notification', notificationData);
+  } catch (error) {
+    console.error(`Failed to send notification for ${anchorCode}${streetlightCode ? ` node ${streetlightCode}` : ''}:`, error.message);
   }
 };
 
@@ -129,12 +164,32 @@ const publishTurnOff = async (req, res) => {
       }
     });
 
-    client.on('message', (topic, message) => {
+    client.on('message', async (topic, message) => {
       if (topic === 'PJU-Response') {
         clearTimeout(timeout);
         responseReceived = true;
-        res.status(200).json({ message: 'Response received from control', data: message.toString() });
-        // client.unsubscribe('PJU-Response');
+
+        const responseData = message.toString();
+        const dataParts = responseData.split('-'); // split data by '-'
+        
+        if (dataParts.length < 4) {
+          return res.status(500).json({ message: 'Invalid response format' });
+        }
+
+        const [prefix, blockNumber, anchorCode, statusString] = dataParts;
+        const anchorStatus = parseInt(statusString.charAt(0));
+        const nodeStatuses = statusString.slice(1).split('').map(Number);
+
+        // Send notification for anchor
+        await sendNotification(anchorStatus, anchorCode);
+
+        // Send notifications for each node status
+        for (let i = 0; i < nodeStatuses.length; i++) {
+          const streetlightCode = i + 1;
+          await sendNotification(nodeStatuses[i], anchorCode, streetlightCode);
+        }
+
+        res.status(200).json({ message: 'Response received from control', data: responseData });
       }
     });
   } catch (error) {
