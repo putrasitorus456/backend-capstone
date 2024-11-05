@@ -6,8 +6,9 @@ const createStreetlight = async (req, res) => {
   try {
     const { anchor_code, streetlight_code, nodes, location, installed_yet, condition, status } = req.body;
 
+    // Validasi input
     if (!anchor_code || !location) {
-      return res.status(400).json({ message: 'All fields are required' });
+      return res.status(400).json({ message: 'Anchor code and location are required' });
     }
 
     if (!Array.isArray(location) || location.length !== 2) {
@@ -16,33 +17,40 @@ const createStreetlight = async (req, res) => {
 
     const [lat, lon] = location;
     if (typeof lat !== 'number' || typeof lon !== 'number' || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-      return res.status(400).json({ message: 'Not valid value for lat and lon' });
+      return res.status(400).json({ message: 'Invalid values for latitude and longitude' });
     }
 
+    // Cek apakah streetlight sudah ada
     const existingStreetlight = await Streetlight.findOne({ anchor_code, streetlight_code });
     if (existingStreetlight) {
       return res.status(400).json({ message: 'Streetlight already exists' });
     }
 
-    const newStreetlight = new Streetlight({
+    // Buat objek streetlight baru
+    const newStreetlightData = {
       anchor_code,
-      streetlight_code,
       nodes,
       location,
       installed_yet,
       condition,
-      status
-    });
+      status,
+      ...(streetlight_code && { streetlight_code }) // Tambahkan streetlight_code jika ada
+    };
 
+    const newStreetlight = new Streetlight(newStreetlightData);
+
+    // Simpan streetlight ke database
     const savedStreetlight = await newStreetlight.save();
 
-    try { // kalo jalanin di local, tinggal ganti URL_PROD jadi URL_LOCAL
+    try {
+      // Kirim event ke API eksternal
       const eventResponse = await axios.post(`${process.env.URL_PROD}/api/events`, {
         anchor_code,
-        streetlight_code,
+        ...(streetlight_code && { streetlight_code }), // Hanya tambahkan streetlight_code jika ada
         location,
         last_status: 0
       });
+      console.log('Event API response:', eventResponse.data);
     } catch (apiError) {
       console.error('Error calling event API:', apiError.message);
     }
@@ -82,40 +90,64 @@ const updateStreetlight = async (req, res) => {
       return res.status(400).json({ message: 'Anchor code required' });
     }
 
-    // Cek apakah sudah ada streetlight lain dengan anchor_code dan streetlight_code yang sama, kecuali yang sedang diupdate
-    const existingStreetlight = await Streetlight.findOne({
-      anchor_code,
-      streetlight_code,
-      _id: { $ne: req.params.id }
-    });
+    // Cek apakah streetlight dengan anchor_code dan streetlight_code sudah ada (kecuali untuk ID yang diperbarui)
+    let existingStreetlight;
+    if (!streetlight_code) {
+      existingStreetlight = await Streetlight.findOne({
+        anchor_code,
+        _id: { $ne: req.params.id }
+      });
+    } else {
+      existingStreetlight = await Streetlight.findOne({
+        anchor_code,
+        streetlight_code,
+        _id: { $ne: req.params.id }
+      });
+    }
 
     if (existingStreetlight) {
-      return res.status(400).json({ message: 'Streetlight already exists' });
+      return res.status(400).json({ message: 'Streetlight with this anchor and streetlight code already exists' });
     }
 
     // Ambil streetlight yang akan diperbarui
     const streetlightToUpdate = await Streetlight.findById(req.params.id);
-    
     if (!streetlightToUpdate) {
       return res.status(404).json({ message: 'Streetlight not found' });
     }
 
-    // Simpan streetlight_code yang lama untuk digunakan dalam pembaruan event
+    // Simpan anchor_code dan streetlight_code lama
     const oldAnchorCode = streetlightToUpdate.anchor_code;
     const oldStreetlightCode = streetlightToUpdate.streetlight_code;
 
-    // Update streetlight
+    // Update streetlight berdasarkan apakah streetlight_code ada atau tidak
+    const updatedData = {
+      anchor_code,
+      nodes,
+      location,
+      installed_yet,
+      condition,
+      status,
+      ...(streetlight_code ? { streetlight_code } : {}) // Tambahkan streetlight_code hanya jika ada
+    };
+
     const updatedStreetlight = await Streetlight.findByIdAndUpdate(
       req.params.id,
-      { anchor_code, streetlight_code, nodes, location, installed_yet, condition, status },
+      updatedData,
       { new: true }
     );
 
-    // Update event yang memiliki anchor_code dan streetlight_code yang sama dengan yang lama
-    await Event.updateMany(
-      { anchor_code: oldAnchorCode, streetlight_code: oldStreetlightCode },
-      { anchor_code: updatedStreetlight.anchor_code, streetlight_code: updatedStreetlight.streetlight_code }
-    );
+    // Update event berdasarkan apakah streetlight_code ada atau tidak
+    const eventFilter = {
+      anchor_code: oldAnchorCode,
+      ...(oldStreetlightCode ? { streetlight_code: oldStreetlightCode } : {})
+    };
+
+    const eventUpdate = {
+      anchor_code: updatedStreetlight.anchor_code,
+      ...(updatedStreetlight.streetlight_code ? { streetlight_code: updatedStreetlight.streetlight_code } : {})
+    };
+
+    await Event.updateMany(eventFilter, eventUpdate);
 
     res.status(200).json(updatedStreetlight);
   } catch (error) {
@@ -125,18 +157,22 @@ const updateStreetlight = async (req, res) => {
 
 const deleteStreetlight = async (req, res) => {
   try {
-    // Menghapus streetlight berdasarkan id
     const deletedStreetlight = await Streetlight.findByIdAndDelete(req.params.id);
 
     if (!deletedStreetlight) {
       return res.status(404).json({ message: 'Streetlight not found' });
     }
 
-    // Menghapus event yang memiliki anchor_code dan streetlight_code yang sama
-    await Event.deleteOne({
-      anchor_code: deletedStreetlight.anchor_code,
-      streetlight_code: deletedStreetlight.streetlight_code
-    });
+    if (!deletedStreetlight.streetlight_code) {
+      await Event.deleteOne({
+        anchor_code: deletedStreetlight.anchor_code,
+      });
+    } else {
+      await Event.deleteOne({
+        anchor_code: deletedStreetlight.anchor_code,
+        streetlight_code: deletedStreetlight.streetlight_code,
+      });
+    }
 
     res.status(200).json({ message: 'Streetlight and related events deleted' });
   } catch (error) {

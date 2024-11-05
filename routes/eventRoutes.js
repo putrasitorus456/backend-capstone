@@ -7,5 +7,6 @@ router.get('/', getEvents);
 router.post('/', createEvent);
 
 router.put('/:anchor_code/:streetlight_code', updateEvent);
+router.put('/:anchor_code', updateEvent);
 
 module.exports = router;

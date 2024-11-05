@@ -8,6 +8,8 @@ router.get('/combined', getCombinedData);
 
 router.get('/:anchor_code/:streetlight_code', getNotificationByCode);
 
+router.get('/:anchor_code', getNotificationByCode);
+
 router.post('/', createNotification);
 
 module.exports = router;

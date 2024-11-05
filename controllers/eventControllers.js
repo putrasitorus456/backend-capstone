@@ -17,16 +17,20 @@ const createEvent = async (req, res) => {
   }
 
   try {
-    const newEvent = new Event({
+    const newEventData = {
       anchor_code,
-      streetlight_code,
       location,
       problem: problem || '',
       repaired_yet: repaired_yet || 0,
       last_status,
       reported_by: reported_by || 'Sistem',
-    });
+    };
 
+    if (streetlight_code) {
+      newEventData.streetlight_code = streetlight_code;
+    }
+
+    const newEvent = new Event(newEventData);
     const savedEvent = await newEvent.save();
 
     res.status(201).json(savedEvent);
@@ -37,15 +41,24 @@ const createEvent = async (req, res) => {
 
 const updateEvent = async (req, res) => {
   const { anchor_code, streetlight_code } = req.params;
-  const { problem, last_status, repaired_yet} = req.body;
+  const { problem, last_status, repaired_yet } = req.body;
 
-  if (!anchor_code || !streetlight_code) {
+  if (!anchor_code) {
     return res.status(400).json({ message: 'Missing required data' });
   }
 
   try {
+    let query;
+    
+    // Tentukan query berdasarkan ada atau tidaknya streetlight_code
+    if (!streetlight_code) {
+      query = { anchor_code, streetlight_code: { $exists: false } };
+    } else {
+      query = { anchor_code, streetlight_code };
+    }
+
     const updatedEvent = await Event.findOneAndUpdate(
-      { anchor_code, streetlight_code },
+      query,
       {
         problem: problem || '',
         last_status: last_status || 0,
@@ -55,7 +68,7 @@ const updateEvent = async (req, res) => {
     );
 
     if (!updatedEvent) {
-      return res.status(404).json({ message: 'Streetlight not found' });
+      return res.status(404).json({ message: 'Event not found' });
     }
 
     res.status(200).json(updatedEvent);

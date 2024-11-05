@@ -9,14 +9,23 @@ const sendRepairNotification = async (anchor_code, streetlight_code, problem, lo
   const [latitude, longitude] = location;
   const googleMapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
 
-  const message = `*Pemberitahuan Perbaikan Lampu Jalan*\n\nYth. Petugas Perbaikan,\n\nKami ingin menginformasikan bahwa terdapat lampu jalan yang bermasalah di lokasi berikut:\n\nKode anchor: ${anchor_code}\nKode lampu: ${streetlight_code}\nLokasi: [Klik untuk melihat lokasi](${googleMapsLink})\nDetail masalah: ${problem}\n\nSilakan klik tombol di bawah ini untuk memulai perbaikan.`;
+  // Kondisi untuk hanya memproses satu data dengan anchor_code tanpa streetlight_code
+  if (!streetlight_code) {
+    const existingEvent = await Event.findOne({ anchor_code, streetlight_code: { $exists: false } });
+    if (existingEvent) {
+      console.log(`Data dengan anchor_code: ${anchor_code} sudah diproses. Tidak ada streetlight_code.`);
+      return; // Hentikan pemrosesan untuk data yang lain
+    }
+  }
+
+  const message = `*Pemberitahuan Perbaikan Lampu Jalan*\n\nYth. Petugas Perbaikan,\n\nKami ingin menginformasikan bahwa terdapat lampu jalan yang bermasalah di lokasi berikut:\n\nKode anchor: ${anchor_code}\nKode lampu: ${streetlight_code || 'Tidak ada'}\nLokasi: [Klik untuk melihat lokasi](${googleMapsLink})\nDetail masalah: ${problem}\n\nSilakan klik tombol di bawah ini untuk memulai perbaikan.`;
 
   const replyMarkup = {
     inline_keyboard: [
       [
         {
           text: 'Mulai Perbaikan',
-          callback_data: `start_repair|${anchor_code}|${streetlight_code}`,
+          callback_data: `start_repair|${anchor_code}|${streetlight_code || 'none'}`,
         },
       ],
     ],
@@ -47,11 +56,11 @@ const handleTelegramCallbackQuery = async (req, res) => {
 
   if (action === 'start_repair') {
     await Event.findOneAndUpdate(
-      { anchor_code, streetlight_code },
+      { anchor_code, streetlight_code: streetlight_code === 'none' ? { $exists: false } : streetlight_code },
       { repaired_yet: 1 }
     );
 
-    const confirmMessage = `Perbaikan pada lampu dengan kode anchor: ${anchor_code} dan kode lampu: ${streetlight_code} telah dimulai.`;
+    const confirmMessage = `Perbaikan pada lampu dengan kode anchor: ${anchor_code} dan kode lampu: ${streetlight_code === 'none' ? 'Tidak ada' : streetlight_code} telah dimulai.`;
 
     const replyMarkup = {
       inline_keyboard: [
@@ -70,27 +79,24 @@ const handleTelegramCallbackQuery = async (req, res) => {
       reply_markup: replyMarkup,
     });
 
-    // Kirim pesan konfirmasi
     await axios.post(`${TELEGRAM_API_URL}${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       chat_id: chatId,
       text: confirmMessage,
     });
   } else if (action === 'finish_repair') {
     await Event.findOneAndUpdate(
-      { anchor_code, streetlight_code },
+      { anchor_code, streetlight_code: streetlight_code === 'none' ? { $exists: false } : streetlight_code },
       { repaired_yet: 2 }
     );
 
-    const finishMessage = `Perbaikan pada lampu dengan kode anchor: ${anchor_code} dan kode lampu: ${streetlight_code} telah selesai dan akan diverifikasi.`;
+    const finishMessage = `Perbaikan pada lampu dengan kode anchor: ${anchor_code} dan kode lampu: ${streetlight_code === 'none' ? 'Tidak ada' : streetlight_code} telah selesai dan akan diverifikasi.`;
 
-    // Hapus tombol inline keyboard
     await axios.post(`${TELEGRAM_API_URL}${TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`, {
       chat_id: chatId,
       message_id: messageId,
       reply_markup: { inline_keyboard: [] },
     });
 
-    // Kirim pesan akhir konfirmasi
     await axios.post(`${TELEGRAM_API_URL}${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       chat_id: chatId,
       text: finishMessage,

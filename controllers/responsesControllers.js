@@ -25,10 +25,10 @@ const getResponseById = async (req, res) => {
 };
 
 const sendMessage = async (anchor_code, streetlight_code, problem, location) => {
-  try { // kalo jalanin di local, tinggal ganti URL_PROD jadi URL_LOCAL
+  try {
     const messageResponse = await axios.post(`${process.env.URL_PROD}/api/message`, {
       anchor_code,
-      streetlight_code,
+      streetlight_code: streetlight_code || undefined,
       problem,
       location,
     });
@@ -40,19 +40,21 @@ const sendMessage = async (anchor_code, streetlight_code, problem, location) => 
 
 const updateStreetlightCondition = async (anchor_code, streetlight_code, condition) => {
   try {
-    await Streetlight.findOneAndUpdate(
-      { anchor_code, streetlight_code },
-      { condition }
-    );
-    console.log(`Condition of streetlight ${anchor_code}${streetlight_code} updated to ${condition}`);
+    const query = streetlight_code ? { anchor_code, streetlight_code } : { anchor_code, streetlight_code: { $exists: false } };
+    await Streetlight.findOneAndUpdate(query, { condition });
+    console.log(`Condition of streetlight ${anchor_code}${streetlight_code || ''} updated to ${condition}`);
   } catch (updateError) {
     console.error('Error updating streetlight condition:', updateError.message);
   }
 };
 
 const updateEvent = async (anchor_code, streetlight_code, problem, repaired_yet) => {
-  try { // kalo jalanin di local, tinggal ganti URL_PROD jadi URL_LOCAL
-    const repairResponse = await axios.put(`${process.env.URL_PROD}/api/events/${anchor_code}/${streetlight_code}`, {
+  try {
+    const url = streetlight_code 
+      ? `${process.env.URL_PROD}/api/events/${anchor_code}/${streetlight_code}`
+      : `${process.env.URL_PROD}/api/events/${anchor_code}`;
+      
+    const repairResponse = await axios.put(url, {
       problem,
       repaired_yet,
     });
@@ -65,21 +67,23 @@ const updateEvent = async (anchor_code, streetlight_code, problem, repaired_yet)
 const createResponse = async (req, res) => {
   const { type, problem, anchor_code, streetlight_code } = req.body;
 
-  if (typeof type !== 'number' || !problem || !anchor_code || !streetlight_code) {
+  if (typeof type !== 'number' || !problem || !anchor_code) {
     return res.status(400).json({ message: 'Not enough data' });
   }
 
-  const existingStreetlight = await Streetlight.findOne({ anchor_code, streetlight_code });
+  const query = streetlight_code ? { anchor_code, streetlight_code } : { anchor_code, streetlight_code: { $exists: false } };
+  const existingStreetlight = await Streetlight.findOne(query);
+
   if (!existingStreetlight) {
-    return res.status(404).json({ message: 'Streetlight not found.' });
+    return res.status(404).json({ message: 'Streetlight not found' });
   }
 
   const { location } = existingStreetlight;
 
   const title = type === 0 ? 'Pemberitahuan Permasalahan Lampu' : 'Pemberitahuan Perbaikan Lampu';
   const body = type === 0
-    ? `Terdeteksi permasalahan ${problem} untuk lampu ${anchor_code}${streetlight_code}. Segera kirimkan petugas untuk perbaikan.`
-    : `Perbaikan lampu ${anchor_code}${streetlight_code}, dengan permasalahan ${problem}, telah selesai dilakukan. Lampu telah dapat menyala dan komunikasi berjalan baik.`;
+    ? `Terdeteksi permasalahan ${problem} untuk lampu ${anchor_code}${streetlight_code || ''}. Segera kirimkan petugas untuk perbaikan.`
+    : `Perbaikan lampu ${anchor_code}${streetlight_code || ''}, dengan permasalahan ${problem}, telah selesai dilakukan. Lampu telah dapat menyala dan komunikasi berjalan baik.`;
 
   try {
     const newResponse = new Responses({
@@ -110,19 +114,20 @@ const createResponse = async (req, res) => {
 const getCombinedData = async (req, res) => {
   try {
     const responses = await Responses.find();
-    const streetlights = await Streetlight.find();
+    const streetlights = await Streetlight.find().select('-date');
 
     const combinedData = responses.map(response => {
-      // Mencari pola huruf dan angka seperti C1, A2, dll.
-      const match = response.body.match(/\b([A-Z])(\d+)\b/);
+      // Mencari pola huruf-angka (seperti C1, A2, dll.) atau dua huruf (seperti AA, AB, dll.)
+      const match = response.body.match(/\b([A-Z]{1,2})(\d+)?\b/);
 
       if (match) {
-        const anchor_code = match[1]; // Bagian huruf sebagai anchor_code
-        const streetlight_code = match[2]; // Bagian angka sebagai streetlight_code
+        const anchor_code = match[1]; // Bagian huruf atau dua huruf
+        const streetlight_code = match[2] || null; // Bagian angka jika ada
 
-        // Mencari streetlight yang cocok dengan anchor_code dan streetlight_code
+        // Mencari streetlight yang cocok berdasarkan anchor_code dan streetlight_code
         const streetlight = streetlights.find(sl => 
-          sl.anchor_code === anchor_code && sl.streetlight_code === streetlight_code
+          sl.anchor_code === anchor_code && 
+          (streetlight_code ? sl.streetlight_code === streetlight_code : !sl.streetlight_code)
         );
 
         return {
@@ -130,7 +135,8 @@ const getCombinedData = async (req, res) => {
           ...(streetlight ? streetlight.toObject() : {}),
         };
       }
-      
+
+      // Jika tidak ada kecocokan pola, kembalikan response saja
       return response.toObject();
     });
 
