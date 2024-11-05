@@ -105,10 +105,44 @@ const publishTurnOn = async (req, res) => {
         console.log(anchorStatus, anchorCode);
         await sendNotificationOn(1, anchorCode);
 
+        if (anchorStatus !== 1) {
+          const problemMapping = { 0: "komunikasi", 2: "lampu", 3: "lampu", 4: "komunikasi", 5: "sensor" };
+          const payloadResponse = {
+            type: 0,
+            problem: problemMapping[anchorStatus] || "unknown",
+            anchor_code: anchorCode,
+            ...(i > 0 && { streetlight_code: i })
+          };
+          
+          // Send response with problem information
+          await fetch('https://pju-backend.vercel.app/api/responses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloadResponse)
+          });
+        }
+
         for (let i = 0; i < nodeStatuses.length; i++) {
           const streetlightCode = i + 1;
           console.log(nodeStatuses[i], anchorCode, streetlightCode);
           await sendNotificationOn(1, anchorCode, streetlightCode);
+
+          if (nodeStatuses[i] !== 1) {
+            const problemMapping = { 0: "komunikasi", 2: "lampu", 3: "lampu", 4: "komunikasi", 5: "sensor" };
+            const payloadResponse = {
+              type: 0,
+              problem: problemMapping[nodeStatuses[i]] || "unknown",
+              anchor_code: anchorCode,
+              ...(i > 0 && { streetlight_code: i })
+            };
+            
+            // Send response with problem information
+            await fetch('https://pju-backend.vercel.app/api/responses', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payloadResponse)
+            });
+          }
         }
 
         res.status(200).json({ message: 'Response received from control', data: responseData });
@@ -202,11 +236,44 @@ const publishTurnOff = async (req, res) => {
 
         // Send notification for anchor
         await sendNotificationOff(0, anchorCode);
+        if (anchorStatus !== 2) {
+          const problemMapping = { 0: "komunikasi", 1: "lampu", 3: "lampu", 4: "komunikasi", 5: "sensor" };
+          const payloadResponse = {
+            type: 0,
+            problem: problemMapping[anchorStatus] || "unknown",
+            anchor_code: anchorCode,
+            ...(i > 0 && { streetlight_code: i })
+          };
+          
+          // Send response with problem information
+          await fetch('https://pju-backend.vercel.app/api/responses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloadResponse)
+          });
+        }
 
         // Send notifications for each node status
         for (let i = 0; i < nodeStatuses.length; i++) {
           const streetlightCode = i + 1;
           await sendNotificationOff(0, anchorCode, streetlightCode);
+
+          if (nodeStatuses[i] !== 2) {
+            const problemMapping = { 0: "komunikasi", 1: "lampu", 3: "lampu", 4: "komunikasi", 5: "sensor" };
+            const payloadResponse = {
+              type: 0,
+              problem: problemMapping[nodeStatuses[i]] || "unknown",
+              anchor_code: anchorCode,
+              ...(i > 0 && { streetlight_code: i })
+            };
+            
+            // Send response with problem information
+            await fetch('https://pju-backend.vercel.app/api/responses', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payloadResponse)
+            });
+          }
         }
 
         res.status(200).json({ message: 'Response received from control', data: responseData });
