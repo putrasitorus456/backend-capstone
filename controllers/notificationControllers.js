@@ -33,7 +33,7 @@ const getNotificationByCode = async (req, res) => {
 const createNotification = async (req, res) => {
   const { type, anchor_code, streetlight_code } = req.body;
 
-  if (typeof type !== 'number' || !anchor_code || !streetlight_code) {
+  if (typeof type !== 'number' || !anchor_code) {
     return res.status(400).json({ message: 'All fields are required' });
   }
 
