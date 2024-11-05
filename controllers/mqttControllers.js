@@ -138,7 +138,7 @@ const sendNotificationOn = async (status, anchorCode, streetlightCode = null) =>
 };
 
 const sendNotificationOff = async (status, anchorCode, streetlightCode = null) => {
-  const type = status === 1 ? 1 : 3;
+  const type = status === 0 ? 0 : 3;
 
   const notificationData = {
     type,
