@@ -102,10 +102,12 @@ const publishTurnOn = async (req, res) => {
         const anchorStatus = parseInt(statusString.charAt(0));
         const nodeStatuses = statusString.slice(1).split('').map(Number);
 
+        console.log(anchorStatus, anchorCode);
         await sendNotification(anchorStatus, anchorCode);
 
         for (let i = 0; i < nodeStatuses.length; i++) {
           const streetlightCode = i + 1;
+          console.log(nodeStatuses[i], anchorCode, streetlightCode);
           await sendNotification(nodeStatuses[i], anchorCode, streetlightCode);
         }
 
@@ -128,6 +130,7 @@ const sendNotification = async (status, anchorCode, streetlightCode = null) => {
   };
 
   try {
+    console.log('Sending notification for', anchorCode, streetlightCode, notificationData);
     await axios.post('https://pju-backend.vercel.app/api/notification', notificationData);
   } catch (error) {
     console.error(`Failed to send notification for ${anchorCode}${streetlightCode ? ` node ${streetlightCode}` : ''}:`, error.message);
