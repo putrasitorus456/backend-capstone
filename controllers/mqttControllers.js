@@ -201,12 +201,12 @@ const publishTurnOff = async (req, res) => {
         const nodeStatuses = statusString.slice(1).split('').map(Number);
 
         // Send notification for anchor
-        await sendNotificationOff(2, anchorCode);
+        await sendNotificationOff(0, anchorCode);
 
         // Send notifications for each node status
         for (let i = 0; i < nodeStatuses.length; i++) {
           const streetlightCode = i + 1;
-          await sendNotificationOff(2, anchorCode, streetlightCode);
+          await sendNotificationOff(0, anchorCode, streetlightCode);
         }
 
         res.status(200).json({ message: 'Response received from control', data: responseData });
