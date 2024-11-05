@@ -103,12 +103,12 @@ const publishTurnOn = async (req, res) => {
         const nodeStatuses = statusString.slice(1).split('').map(Number);
 
         console.log(anchorStatus, anchorCode);
-        await sendNotification(anchorStatus, anchorCode);
+        await sendNotificationOn(1, anchorCode);
 
         for (let i = 0; i < nodeStatuses.length; i++) {
           const streetlightCode = i + 1;
           console.log(nodeStatuses[i], anchorCode, streetlightCode);
-          await sendNotification(nodeStatuses[i], anchorCode, streetlightCode);
+          await sendNotificationOn(1, anchorCode, streetlightCode);
         }
 
         res.status(200).json({ message: 'Response received from control', data: responseData });
@@ -120,7 +120,24 @@ const publishTurnOn = async (req, res) => {
   }
 };
 
-const sendNotification = async (status, anchorCode, streetlightCode = null) => {
+const sendNotificationOn = async (status, anchorCode, streetlightCode = null) => {
+  const type = status === 1 ? 1 : 3;
+
+  const notificationData = {
+    type,
+    anchor_code: anchorCode,
+    ...(streetlightCode && { streetlight_code: streetlightCode })
+  };
+
+  try {
+    console.log('Sending notification for', anchorCode, streetlightCode, notificationData);
+    await axios.post('https://pju-backend.vercel.app/api/notification', notificationData);
+  } catch (error) {
+    console.error(`Failed to send notification for ${anchorCode}${streetlightCode ? ` node ${streetlightCode}` : ''}:`, error.message);
+  }
+};
+
+const sendNotificationOff = async (status, anchorCode, streetlightCode = null) => {
   const type = status === 1 ? 1 : 3;
 
   const notificationData = {
@@ -184,12 +201,12 @@ const publishTurnOff = async (req, res) => {
         const nodeStatuses = statusString.slice(1).split('').map(Number);
 
         // Send notification for anchor
-        await sendNotification(anchorStatus, anchorCode);
+        await sendNotificationOff(2, anchorCode);
 
         // Send notifications for each node status
         for (let i = 0; i < nodeStatuses.length; i++) {
           const streetlightCode = i + 1;
-          await sendNotification(nodeStatuses[i], anchorCode, streetlightCode);
+          await sendNotificationOff(2, anchorCode, streetlightCode);
         }
 
         res.status(200).json({ message: 'Response received from control', data: responseData });
