@@ -2,15 +2,15 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const connectDB = require('./config/db');
-const userRoutes = require('./routes/userRoutes');
-const responsesRoutes = require('./routes/responsesRoutes');
-const notificationRoutes = require('./routes/notificationRoutes');
-const telegramchatRoutes = require('./routes/telegramchatRoutes');
-const streetlightRoutes = require('./routes/streetlightRoutes');
-const eventRoutes = require('./routes/eventRoutes');
-const graphRoutes = require('./routes/graphRoutes');
-const mqttRoutes = require('./routes/mqttRoutes')
+const connectDB = require('../config/db');
+const userRoutes = require('../routes/userRoutes');
+const responsesRoutes = require('../routes/responsesRoutes');
+const notificationRoutes = require('../routes/notificationRoutes');
+const telegramchatRoutes = require('../routes/telegramchatRoutes');
+const streetlightRoutes = require('../routes/streetlightRoutes');
+const eventRoutes = require('../routes/eventRoutes');
+const graphRoutes = require('../routes/graphRoutes');
+const mqttRoutes = require('../routes/mqttRoutes')
 const cron = require('node-cron');
 
 dotenv.config();
