@@ -1,7 +1,11 @@
 const mqtt = require('mqtt');
-const client = mqtt.connect('pju-c09.cloud.shiftr.io', {
-  username: 'your-username',
-  password: 'your-password',
+const dotenv = require('dotenv');
+
+dotenv.config();
+
+const client = mqtt.connect(process.env.MQTT_URL, {
+  username: process.env.MQTT_USERNAME,
+  password: process.env.MQTT_PASSWORD,
 });
 
 const publishGetInfo = async (req, res) => {
@@ -12,16 +16,41 @@ const publishGetInfo = async (req, res) => {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
+  let responseReceived = false;
+
+  const timeout = setTimeout(() => {
+    if (!responseReceived) {
+      res.status(504).json({ message: 'Timeout: No response from control within 1.5 minutes' });
+    }
+  }, 90 * 1000);
+
   try {
     client.publish('PJU-Control', message, (error) => {
       if (error) {
-        return res
-          .status(500)
-          .json({ message: 'Failed to publish message', error: error.message });
+        clearTimeout(timeout);
+        return res.status(500).json({ message: 'Failed to publish message', error: error.message });
       }
-      res.status(200).json({ message: 'Message published successfully' });
+    });
+
+    client.subscribe('PJU-Response', (err) => {
+      if (err) {
+        clearTimeout(timeout);
+        return res.status(500).json({ message: 'Failed to subscribe to response topic', error: err.message });
+      }
+    });
+
+    client.on('message', (topic, message) => {
+      if (topic === 'PJU-Response'){
+        clearTimeout(timeout);
+        responseReceived = true;
+
+        res.status(200).json({ message: 'Response received from control', data: message.toString() });
+
+        client.unsubscribe('PJU-Response');
+      }
     });
   } catch (error) {
+    clearTimeout(timeout);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
@@ -34,16 +63,38 @@ const publishTurnOn = async (req, res) => {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
+  let responseReceived = false;
+  const timeout = setTimeout(() => {
+    if (!responseReceived) {
+      res.status(504).json({ message: 'Timeout: No response from control within 1.5 minutes' });
+    }
+  }, 90 * 1000);
+
   try {
     client.publish('PJU-Control', message, (error) => {
       if (error) {
-        return res
-          .status(500)
-          .json({ message: 'Failed to publish message', error: error.message });
+        clearTimeout(timeout);
+        return res.status(500).json({ message: 'Failed to publish message', error: error.message });
       }
-      res.status(200).json({ message: 'Message published successfully' });
+    });
+
+    client.subscribe('PJU-Response', (err) => {
+      if (err) {
+        clearTimeout(timeout);
+        return res.status(500).json({ message: 'Failed to subscribe to response topic', error: err.message });
+      }
+    });
+
+    client.on('message', (topic, message) => {
+      if (topic === 'PJU-Response') {
+        clearTimeout(timeout);
+        responseReceived = true;
+        res.status(200).json({ message: 'Response received from control', data: message.toString() });
+        client.unsubscribe('PJU-Response');
+      }
     });
   } catch (error) {
+    clearTimeout(timeout);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
@@ -56,16 +107,38 @@ const publishTurnOff = async (req, res) => {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
+  let responseReceived = false;
+  const timeout = setTimeout(() => {
+    if (!responseReceived) {
+      res.status(504).json({ message: 'Timeout: No response from control within 1.5 minutes' });
+    }
+  }, 90 * 1000);
+
   try {
     client.publish('PJU-Control', message, (error) => {
       if (error) {
-        return res
-          .status(500)
-          .json({ message: 'Failed to publish message', error: error.message });
+        clearTimeout(timeout);
+        return res.status(500).json({ message: 'Failed to publish message', error: error.message });
       }
-      res.status(200).json({ message: 'Message published successfully' });
+    });
+
+    client.subscribe('PJU-Response', (err) => {
+      if (err) {
+        clearTimeout(timeout);
+        return res.status(500).json({ message: 'Failed to subscribe to response topic', error: err.message });
+      }
+    });
+
+    client.on('message', (topic, message) => {
+      if (topic === 'PJU-Response') {
+        clearTimeout(timeout);
+        responseReceived = true;
+        res.status(200).json({ message: 'Response received from control', data: message.toString() });
+        client.unsubscribe('PJU-Response');
+      }
     });
   } catch (error) {
+    clearTimeout(timeout);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };

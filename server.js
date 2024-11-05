@@ -10,6 +10,7 @@ const telegramchatRoutes = require('./routes/telegramchatRoutes');
 const streetlightRoutes = require('./routes/streetlightRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const graphRoutes = require('./routes/graphRoutes');
+const mqttRoutes = require('./routes/mqttRoutes')
 const cron = require('node-cron');
 
 dotenv.config();
@@ -29,6 +30,7 @@ app.use('/api/message', telegramchatRoutes);
 app.use('/api/streetlights', streetlightRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/graph', graphRoutes);
+app.use('/api/mqtt', mqttRoutes)
 
 app.get('/', (req, res) => {
   res.send('Backend for PJU Dashboard!');

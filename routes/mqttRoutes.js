@@ -1,9 +1,5 @@
 const express = require('express');
-const {
-  publishGetInfo,
-  publishTurnOn,
-  publishTurnOff,
-} = require('../controllers/mqttController');
+const { publishGetInfo, publishTurnOn, publishTurnOff } = require('../controllers/mqttControllers');
 const router = express.Router();
 
 router.post('/info', publishGetInfo);
