@@ -22,7 +22,7 @@ const publishGetInfo = async (req, res) => {
     if (!responseReceived) {
       res.status(504).json({ message: 'Timeout: No response from control within 1.5 minutes' });
     }
-  }, 90 * 1000);
+  }, 60 * 1000);
 
   try {
     client.publish('PJU-Control', message, (error) => {
@@ -46,7 +46,7 @@ const publishGetInfo = async (req, res) => {
 
         res.status(200).json({ message: 'Response received from control', data: message.toString() });
 
-        client.unsubscribe('PJU-Response');
+        // client.unsubscribe('PJU-Response');
       }
     });
   } catch (error) {
@@ -68,7 +68,7 @@ const publishTurnOn = async (req, res) => {
     if (!responseReceived) {
       res.status(504).json({ message: 'Timeout: No response from control within 1.5 minutes' });
     }
-  }, 90 * 1000);
+  }, 60 * 1000);
 
   try {
     client.publish('PJU-Control', message, (error) => {
@@ -90,7 +90,7 @@ const publishTurnOn = async (req, res) => {
         clearTimeout(timeout);
         responseReceived = true;
         res.status(200).json({ message: 'Response received from control', data: message.toString() });
-        client.unsubscribe('PJU-Response');
+        // client.unsubscribe('PJU-Response');
       }
     });
   } catch (error) {
@@ -112,7 +112,7 @@ const publishTurnOff = async (req, res) => {
     if (!responseReceived) {
       res.status(504).json({ message: 'Timeout: No response from control within 1.5 minutes' });
     }
-  }, 90 * 1000);
+  }, 60 * 1000);
 
   try {
     client.publish('PJU-Control', message, (error) => {
@@ -134,7 +134,7 @@ const publishTurnOff = async (req, res) => {
         clearTimeout(timeout);
         responseReceived = true;
         res.status(200).json({ message: 'Response received from control', data: message.toString() });
-        client.unsubscribe('PJU-Response');
+        // client.unsubscribe('PJU-Response');
       }
     });
   } catch (error) {
