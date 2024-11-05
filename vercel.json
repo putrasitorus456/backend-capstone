@@ -14,7 +14,7 @@
   ],
   "functions": {
     "api/*.js": {
-      "runtime": 60
+      "maxDuration": 60
     }
   }
 }
