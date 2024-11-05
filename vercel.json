@@ -5,8 +5,7 @@
       "maxDuration": 60
     },
     "server.js": {
-      "maxDuration": 60,
-      "runtime": "@vercel/node"
+      "maxDuration": 60
     }
   },
   "routes": [
