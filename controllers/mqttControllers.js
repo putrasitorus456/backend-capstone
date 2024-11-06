@@ -47,7 +47,7 @@ const publishGetInfo = async (req, res) => {
 
         res.status(200).json({ message: 'Response received from control', data: message.toString() });
 
-        // client.unsubscribe('PJU-Response');
+        client.unsubscribe('PJU-Response');
       }
     });
   } catch (error) {
@@ -67,6 +67,8 @@ const publishTurnOn = async (req, res) => {
   let responseReceived = false;
   const timeout = setTimeout(() => {
     if (!responseReceived) {
+      client.unsubscribe('PJU-Response');
+      client.removeAllListeners('message');
       res.status(504).json({ message: 'Timeout: No response from control within 1 minute' });
     }
   }, 60 * 1000);
@@ -130,7 +132,7 @@ const publishTurnOn = async (req, res) => {
               type: 0,
               problem: problemMapping[nodeStatuses[i]] || "unknown",
               anchor_code: anchorCode,
-              streetlight_code: streetlightCode // Use streetlight_code here
+              streetlight_code: streetlightCode
             };
             
             // Send response with problem information for each node
@@ -141,6 +143,14 @@ const publishTurnOn = async (req, res) => {
             });
           }
         }
+
+        // Unsubscribe from the topic and remove the listener after response is processed
+        client.unsubscribe('PJU-Response', (err) => {
+          if (err) {
+            console.error('Failed to unsubscribe from topic:', err.message);
+          }
+        });
+        client.removeAllListeners('message');
 
         res.status(200).json({ message: 'Response received from control', data: responseData });
       }
@@ -195,6 +205,8 @@ const publishTurnOff = async (req, res) => {
   let responseReceived = false;
   const timeout = setTimeout(() => {
     if (!responseReceived) {
+      client.unsubscribe('PJU-Response');
+      client.removeAllListeners('message');
       res.status(504).json({ message: 'Timeout: No response from control within 1.5 minutes' });
     }
   }, 60 * 1000);
@@ -259,7 +271,7 @@ const publishTurnOff = async (req, res) => {
               type: 0,
               problem: problemMapping[nodeStatuses[i]] || "unknown",
               anchor_code: anchorCode,
-              streetlight_code: streetlightCode // Use streetlight_code here
+              streetlight_code: streetlightCode
             };
             
             // Send response with problem information for each node
@@ -270,6 +282,14 @@ const publishTurnOff = async (req, res) => {
             });
           }
         }
+
+        // Unsubscribe from the topic and remove the listener after response is processed
+        client.unsubscribe('PJU-Response', (err) => {
+          if (err) {
+            console.error('Failed to unsubscribe from topic:', err.message);
+          }
+        });
+        client.removeAllListeners('message');
 
         res.status(200).json({ message: 'Response received from control', data: responseData });
       }
