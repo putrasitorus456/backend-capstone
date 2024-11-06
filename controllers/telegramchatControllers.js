@@ -9,15 +9,6 @@ const sendRepairNotification = async (anchor_code, streetlight_code, problem, lo
   const [latitude, longitude] = location;
   const googleMapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
 
-  // Kondisi untuk hanya memproses satu data dengan anchor_code tanpa streetlight_code
-  if (!streetlight_code) {
-    const existingEvent = await Event.findOne({ anchor_code, streetlight_code: { $exists: false } });
-    if (existingEvent) {
-      console.log(`Data dengan anchor_code: ${anchor_code} sudah diproses. Tidak ada streetlight_code.`);
-      return; // Hentikan pemrosesan untuk data yang lain
-    }
-  }
-
   const message = `*Pemberitahuan Perbaikan Lampu Jalan*\n\nYth. Petugas Perbaikan,\n\nKami ingin menginformasikan bahwa terdapat lampu jalan yang bermasalah di lokasi berikut:\n\nKode anchor: ${anchor_code}\nKode lampu: ${streetlight_code || 'Tidak ada'}\nLokasi: [Klik untuk melihat lokasi](${googleMapsLink})\nDetail masalah: ${problem}\n\nSilakan klik tombol di bawah ini untuk memulai perbaikan.`;
 
   const replyMarkup = {
@@ -38,7 +29,6 @@ const sendRepairNotification = async (anchor_code, streetlight_code, problem, lo
       parse_mode: 'Markdown',
       reply_markup: replyMarkup,
     });
-    console.log('Repair notification sent');
   } catch (error) {
     console.error('Error sending message: ', error.message);
   }
@@ -84,10 +74,25 @@ const handleTelegramCallbackQuery = async (req, res) => {
       text: confirmMessage,
     });
   } else if (action === 'finish_repair') {
-    await Event.findOneAndUpdate(
+    const updateResult = await Event.findOneAndUpdate(
       { anchor_code, streetlight_code: streetlight_code === 'none' ? { $exists: false } : streetlight_code },
       { repaired_yet: 2 }
     );
+
+    if (updateResult) {
+      console.log('repaired_yet berhasil diubah menjadi 2');
+
+      // Panggil processResponse segera setelah repaired_yet diubah menjadi 2
+      await processResponse({
+        type: 1,
+        problem: updateResult.problem,
+        anchor_code: updateResult.anchor_code,
+        streetlight_code: updateResult.streetlight_code,
+      });
+      console.log('processResponse selesai setelah perubahan menjadi 2');
+    } else {
+      console.log('Gagal menemukan dan memperbarui dokumen untuk finish_repair');
+    }
 
     const finishMessage = `Perbaikan pada lampu dengan kode anchor: ${anchor_code} dan kode lampu: ${streetlight_code === 'none' ? 'Tidak ada' : streetlight_code} telah selesai dan akan diverifikasi.`;
 

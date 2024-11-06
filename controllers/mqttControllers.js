@@ -102,19 +102,17 @@ const publishTurnOn = async (req, res) => {
         const anchorStatus = parseInt(statusString.charAt(0));
         const nodeStatuses = statusString.slice(1).split('').map(Number);
 
-        console.log(anchorStatus, anchorCode);
         await sendNotificationOn(1, anchorCode);
 
         if (anchorStatus !== 1) {
-          const problemMapping = { 0: "komunikasi", 2: "lampu", 3: "lampu", 4: "komunikasi", 5: "sensor" };
+          const problemMapping = { 0: "komunikasi", 2: "lampu", 3: "lampu", 4: "sensor" };
           const payloadResponse = {
             type: 0,
             problem: problemMapping[anchorStatus] || "unknown",
-            anchor_code: anchorCode,
-            ...(i > 0 && { streetlight_code: i })
+            anchor_code: anchorCode
           };
           
-          // Send response with problem information
+          // Send response with problem information for anchor
           await fetch('https://pju-backend.vercel.app/api/responses', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -124,19 +122,18 @@ const publishTurnOn = async (req, res) => {
 
         for (let i = 0; i < nodeStatuses.length; i++) {
           const streetlightCode = i + 1;
-          console.log(nodeStatuses[i], anchorCode, streetlightCode);
           await sendNotificationOn(1, anchorCode, streetlightCode);
 
           if (nodeStatuses[i] !== 1) {
-            const problemMapping = { 0: "komunikasi", 2: "lampu", 3: "lampu", 4: "komunikasi", 5: "sensor" };
+            const problemMapping = { 0: "komunikasi", 2: "lampu", 3: "lampu", 4: "sensor" };
             const payloadResponse = {
               type: 0,
               problem: problemMapping[nodeStatuses[i]] || "unknown",
               anchor_code: anchorCode,
-              ...(i > 0 && { streetlight_code: i })
+              streetlight_code: streetlightCode // Use streetlight_code here
             };
             
-            // Send response with problem information
+            // Send response with problem information for each node
             await fetch('https://pju-backend.vercel.app/api/responses', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -164,7 +161,6 @@ const sendNotificationOn = async (status, anchorCode, streetlightCode = null) =>
   };
 
   try {
-    console.log('Sending notification for', anchorCode, streetlightCode, notificationData);
     await axios.post('https://pju-backend.vercel.app/api/notification', notificationData);
   } catch (error) {
     console.error(`Failed to send notification for ${anchorCode}${streetlightCode ? ` node ${streetlightCode}` : ''}:`, error.message);
@@ -224,7 +220,7 @@ const publishTurnOff = async (req, res) => {
         responseReceived = true;
 
         const responseData = message.toString();
-        const dataParts = responseData.split('-'); // split data by '-'
+        const dataParts = responseData.split('-');
         
         if (dataParts.length < 4) {
           return res.status(500).json({ message: 'Invalid response format' });
@@ -237,15 +233,14 @@ const publishTurnOff = async (req, res) => {
         // Send notification for anchor
         await sendNotificationOff(0, anchorCode);
         if (anchorStatus !== 2) {
-          const problemMapping = { 0: "komunikasi", 1: "lampu", 3: "lampu", 4: "komunikasi", 5: "sensor" };
+          const problemMapping = { 0: "komunikasi", 1: "lampu", 3: "lampu", 4: "sensor" };
           const payloadResponse = {
             type: 0,
             problem: problemMapping[anchorStatus] || "unknown",
-            anchor_code: anchorCode,
-            ...(i > 0 && { streetlight_code: i })
+            anchor_code: anchorCode
           };
           
-          // Send response with problem information
+          // Send response with problem information for anchor
           await fetch('https://pju-backend.vercel.app/api/responses', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -259,15 +254,15 @@ const publishTurnOff = async (req, res) => {
           await sendNotificationOff(0, anchorCode, streetlightCode);
 
           if (nodeStatuses[i] !== 2) {
-            const problemMapping = { 0: "komunikasi", 1: "lampu", 3: "lampu", 4: "komunikasi", 5: "sensor" };
+            const problemMapping = { 0: "komunikasi", 1: "lampu", 3: "lampu", 4: "sensor" };
             const payloadResponse = {
               type: 0,
               problem: problemMapping[nodeStatuses[i]] || "unknown",
               anchor_code: anchorCode,
-              ...(i > 0 && { streetlight_code: i })
+              streetlight_code: streetlightCode // Use streetlight_code here
             };
             
-            // Send response with problem information
+            // Send response with problem information for each node
             await fetch('https://pju-backend.vercel.app/api/responses', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },

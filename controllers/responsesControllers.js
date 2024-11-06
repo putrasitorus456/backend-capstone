@@ -1,6 +1,9 @@
 const axios = require('axios');
 const Responses = require('../models/responses');
 const Streetlight = require('../models/streetlight');
+const dotenv = require('dotenv');
+
+dotenv.config();
 
 const getAllResponses = async (req, res) => {
   try {
@@ -26,15 +29,19 @@ const getResponseById = async (req, res) => {
 
 const sendMessage = async (anchor_code, streetlight_code, problem, location) => {
   try {
-    const messageResponse = await axios.post(`${process.env.URL_PROD}/api/message`, {
+    const messageData = {
       anchor_code,
-      streetlight_code: streetlight_code || undefined,
       problem,
       location,
-    });
-    console.log('Message API response:', messageResponse.data);
+    };
+
+    if (streetlight_code) {
+      messageData.streetlight_code = streetlight_code;
+    }
+
+    const messageResponse = await axios.post(`${process.env.URL_PROD}/api/message`, messageData);
   } catch (error) {
-    console.error('Error calling message API:', error.message);
+    console.error('Error calling message API:', error.response?.data || error.message);
   }
 };
 
@@ -42,7 +49,6 @@ const updateStreetlightCondition = async (anchor_code, streetlight_code, conditi
   try {
     const query = streetlight_code ? { anchor_code, streetlight_code } : { anchor_code, streetlight_code: { $exists: false } };
     await Streetlight.findOneAndUpdate(query, { condition });
-    console.log(`Condition of streetlight ${anchor_code}${streetlight_code || ''} updated to ${condition}`);
   } catch (updateError) {
     console.error('Error updating streetlight condition:', updateError.message);
   }
@@ -58,7 +64,6 @@ const updateEvent = async (anchor_code, streetlight_code, problem, repaired_yet)
       problem,
       repaired_yet,
     });
-    console.log('Repair API response:', repairResponse.data);
   } catch (apiError) {
     console.error('Error calling repairs API:', apiError.message);
   }
@@ -67,15 +72,25 @@ const updateEvent = async (anchor_code, streetlight_code, problem, repaired_yet)
 const createResponse = async (req, res) => {
   const { type, problem, anchor_code, streetlight_code } = req.body;
 
-  if (typeof type !== 'number' || !problem || !anchor_code) {
-    return res.status(400).json({ message: 'Not enough data' });
+  try {
+    const savedResponse = await processResponse({ type, problem, anchor_code, streetlight_code });
+    res.status(201).json(savedResponse);
+  } catch (error) {
+    console.error('Server error:', error.message);
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
+const processResponse = async ({ type, problem, anchor_code, streetlight_code }) => {
+  if (typeof type !== 'number' || !anchor_code) {
+    throw new Error('Not enough data');
   }
 
   const query = streetlight_code ? { anchor_code, streetlight_code } : { anchor_code, streetlight_code: { $exists: false } };
   const existingStreetlight = await Streetlight.findOne(query);
 
   if (!existingStreetlight) {
-    return res.status(404).json({ message: 'Streetlight not found' });
+    throw new Error('Streetlight not found');
   }
 
   const { location } = existingStreetlight;
@@ -83,32 +98,30 @@ const createResponse = async (req, res) => {
   const title = type === 0 ? 'Pemberitahuan Permasalahan Lampu' : 'Pemberitahuan Perbaikan Lampu';
   const body = type === 0
     ? `Terdeteksi permasalahan ${problem} untuk lampu ${anchor_code}${streetlight_code || ''}. Segera kirimkan petugas untuk perbaikan.`
-    : `Perbaikan lampu ${anchor_code}${streetlight_code || ''}, dengan permasalahan ${problem}, telah selesai dilakukan. Lampu telah dapat menyala dan komunikasi berjalan baik.`;
+    : `Perbaikan lampu ${anchor_code}${streetlight_code || ''} telah selesai dilakukan. Lampu telah dapat menyala dan komunikasi berjalan baik.`;
 
-  try {
-    const newResponse = new Responses({
-      sender: 'Sistem',
-      title,
-      body,
-    });
-    const savedResponse = await newResponse.save();
+  const newResponse = new Responses({
+    sender: 'Sistem',
+    title,
+    body,
+  });
+  const savedResponse = await newResponse.save();
 
-    const condition = type === 0 ? 0 : 1;
-    await updateStreetlightCondition(anchor_code, streetlight_code, condition);
+  const condition = type === 0 ? 0 : 1;
+  await updateStreetlightCondition(anchor_code, streetlight_code, condition);
 
-    if (type === 0) {
-      await updateEvent(anchor_code, streetlight_code, problem, 0);
+  if (type === 0) {
+    await updateEvent(anchor_code, streetlight_code, problem, 0);
+    if (streetlight_code) {
       await sendMessage(anchor_code, streetlight_code, problem, location);
     } else {
-      await updateEvent(anchor_code, streetlight_code, '', 0);
+      await sendMessage(anchor_code, null, problem, location);
     }
-
-    res.status(201).json(savedResponse);
-
-  } catch (error) {
-    console.error('Server error:', error.message);
-    res.status(500).json({ message: 'Server Error', error: error.message });
+  } else {
+    await updateEvent(anchor_code, streetlight_code, '', 0);
   }
+
+  return savedResponse;
 };
 
 const getCombinedData = async (req, res) => {
@@ -151,4 +164,5 @@ module.exports = {
   getResponseById,
   createResponse,
   getCombinedData,
+  processResponse,
 };

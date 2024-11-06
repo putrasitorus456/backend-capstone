@@ -50,7 +50,7 @@ const createStreetlight = async (req, res) => {
         location,
         last_status: 0
       });
-      console.log('Event API response:', eventResponse.data);
+
     } catch (apiError) {
       console.error('Error calling event API:', apiError.message);
     }
