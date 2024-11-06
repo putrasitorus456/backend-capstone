@@ -90,6 +90,7 @@ const publishTurnOn = async (req, res) => {
       if (topic === 'PJU-Response') {
         clearTimeout(timeout);
         responseReceived = true;
+        client.unsubscribe('PJU-Response');
 
         const responseData = message.toString();
         const dataParts = responseData.split('-');
@@ -141,9 +142,6 @@ const publishTurnOn = async (req, res) => {
             });
           }
         }
-
-        // Unsubscribe from the topic and remove the listener after response is processed
-        client.unsubscribe('PJU-Response');
 
         res.status(200).json({ message: 'Response received from control', data: responseData });
       }
@@ -221,6 +219,7 @@ const publishTurnOff = async (req, res) => {
       if (topic === 'PJU-Response') {
         clearTimeout(timeout);
         responseReceived = true;
+        client.unsubscribe('PJU-Response');
 
         const responseData = message.toString();
         const dataParts = responseData.split('-');
@@ -273,9 +272,6 @@ const publishTurnOff = async (req, res) => {
             });
           }
         }
-
-        // Unsubscribe from the topic and remove the listener after response is processed
-        client.unsubscribe('PJU-Response');
 
         res.status(200).json({ message: 'Response received from control', data: responseData });
       }
