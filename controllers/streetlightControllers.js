@@ -1,6 +1,7 @@
 const axios = require('axios');
 const Streetlight = require('../models/streetlight');
 const Event = require('../models/event');
+const Responses = require('../models/responses');
 
 const createStreetlight = async (req, res) => {
   try {
@@ -190,12 +191,15 @@ const getStreetlightStats = async (req, res) => {
     const condition1 = await Streetlight.countDocuments({ condition: 1 });
     const condition0 = await Streetlight.countDocuments({ condition: 0 });
 
+    const repaired = await Notification.countDocuments({ title: /Perbaikan lampu/i })
+
     res.status(200).json({
       totalStreetlights,
       installed_yet_1: installedYet1,
       installed_yet_0: installedYet0,
       condition_1: condition1,
-      condition_0: condition0
+      condition_0: condition0,
+      repaired: repaired,
     });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching streetlight stats', error: error.message });
