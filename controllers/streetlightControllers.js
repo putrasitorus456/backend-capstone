@@ -191,7 +191,7 @@ const getStreetlightStats = async (req, res) => {
     const condition1 = await Streetlight.countDocuments({ condition: 1 });
     const condition0 = await Streetlight.countDocuments({ condition: 0 });
 
-    const repaired = await Notification.countDocuments({ title: /Perbaikan lampu/i })
+    const repaired = await Responses.countDocuments({ title: /Perbaikan lampu/i })
 
     res.status(200).json({
       totalStreetlights,
