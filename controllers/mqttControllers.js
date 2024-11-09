@@ -1,6 +1,8 @@
 const mqtt = require('mqtt');
 const dotenv = require('dotenv');
 const axios = require('axios');
+const { createNotificationDirect } = require('../controllers/notificationControllers');
+const { processResponse } = require('../controllers/responsesControllers');
 
 dotenv.config();
 
@@ -73,20 +75,20 @@ const publishTurnOn = async (req, res) => {
       if (topic === 'PJU-Response') {
         responseReceived = true;
         client.unsubscribe('PJU-Response');
-
+    
         const responseData = message.toString();
         const dataParts = responseData.split('-');
-        
+    
         if (dataParts.length < 4) {
           return res.status(500).json({ message: 'Invalid response format' });
         }
-
+    
         const [prefix, blockNumber, anchorCode, statusString] = dataParts;
         const anchorStatus = parseInt(statusString.charAt(0));
         const nodeStatuses = statusString.slice(1).split('').map(Number);
-
-        await sendNotificationOn(1, anchorCode);
-
+    
+        await createNotificationDirect(1, anchorCode);
+    
         if (anchorStatus !== 1) {
           const problemMapping = { 0: "komunikasi", 2: "lampu", 3: "lampu", 4: "sensor" };
           const payloadResponse = {
@@ -95,18 +97,14 @@ const publishTurnOn = async (req, res) => {
             anchor_code: anchorCode
           };
           
-          // Send response with problem information for anchor
-          await fetch('https://pju-backend.vercel.app/api/responses', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payloadResponse)
-          });
+          // Panggil fungsi processResponse langsung
+          await processResponse(payloadResponse);
         }
-
+    
         for (let i = 0; i < nodeStatuses.length; i++) {
           const streetlightCode = i + 1;
-          await sendNotificationOn(1, anchorCode, streetlightCode);
-
+          await createNotificationDirect(1, anchorCode, streetlightCode);
+    
           if (nodeStatuses[i] !== 1) {
             const problemMapping = { 0: "komunikasi", 2: "lampu", 3: "lampu", 4: "sensor" };
             const payloadResponse = {
@@ -115,19 +113,15 @@ const publishTurnOn = async (req, res) => {
               anchor_code: anchorCode,
               streetlight_code: streetlightCode
             };
-            
-            // Send response with problem information for each node
-            await fetch('https://pju-backend.vercel.app/api/responses', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payloadResponse)
-            });
+    
+            // Panggil fungsi processResponse langsung
+            await processResponse(payloadResponse);
           }
         }
-
+    
         res.status(200).json({ message: 'Response received from control', data: responseData });
       }
-    });
+    });    
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
@@ -193,20 +187,20 @@ const publishTurnOff = async (req, res) => {
       if (topic === 'PJU-Response') {
         responseReceived = true;
         client.unsubscribe('PJU-Response');
-
+    
         const responseData = message.toString();
         const dataParts = responseData.split('-');
-        
+    
         if (dataParts.length < 4) {
           return res.status(500).json({ message: 'Invalid response format' });
         }
-
+    
         const [prefix, blockNumber, anchorCode, statusString] = dataParts;
         const anchorStatus = parseInt(statusString.charAt(0));
         const nodeStatuses = statusString.slice(1).split('').map(Number);
-
-        // Send notification for anchor
-        await sendNotificationOff(0, anchorCode);
+    
+        await createNotificationDirect(0, anchorCode);
+    
         if (anchorStatus !== 2) {
           const problemMapping = { 0: "komunikasi", 1: "lampu", 3: "lampu", 4: "sensor" };
           const payloadResponse = {
@@ -214,20 +208,15 @@ const publishTurnOff = async (req, res) => {
             problem: problemMapping[anchorStatus] || "unknown",
             anchor_code: anchorCode
           };
-          
-          // Send response with problem information for anchor
-          await fetch('https://pju-backend.vercel.app/api/responses', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payloadResponse)
-          });
+    
+          // Panggil fungsi processResponse langsung
+          await processResponse(payloadResponse);
         }
-
-        // Send notifications for each node status
+    
         for (let i = 0; i < nodeStatuses.length; i++) {
           const streetlightCode = i + 1;
-          await sendNotificationOff(0, anchorCode, streetlightCode);
-
+          await createNotificationDirect(0, anchorCode, streetlightCode);
+    
           if (nodeStatuses[i] !== 2) {
             const problemMapping = { 0: "komunikasi", 1: "lampu", 3: "lampu", 4: "sensor" };
             const payloadResponse = {
@@ -236,19 +225,15 @@ const publishTurnOff = async (req, res) => {
               anchor_code: anchorCode,
               streetlight_code: streetlightCode
             };
-            
-            // Send response with problem information for each node
-            await fetch('https://pju-backend.vercel.app/api/responses', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payloadResponse)
-            });
+    
+            // Panggil fungsi processResponse langsung
+            await processResponse(payloadResponse);
           }
         }
-
+    
         res.status(200).json({ message: 'Response received from control', data: responseData });
       }
-    });
+    });    
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
   }

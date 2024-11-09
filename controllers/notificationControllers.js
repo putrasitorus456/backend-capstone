@@ -38,28 +38,29 @@ const getNotificationByCode = async (req, res) => {
   }
 };
 
-const createNotification = async (req, res) => {
-  const { type, anchor_code, streetlight_code } = req.body;
-
+const createNotificationDirect = async (type, anchor_code, streetlight_code = null) => {
+  // Validasi input
   if (typeof type !== 'number' || !anchor_code) {
-    return res.status(400).json({ message: 'All fields are required' });
+    throw new Error('All fields are required');
   }
+
+  // Tentukan query untuk mencari lampu berdasarkan keberadaan streetlight_code
+  const query = streetlight_code 
+    ? { anchor_code, streetlight_code } 
+    : { anchor_code, streetlight_code: { $exists: false } };
 
   try {
     // Cari lampu yang sesuai dengan kriteria input
-    const query = streetlight_code ? 
-      { anchor_code, streetlight_code } : 
-      { anchor_code, streetlight_code: { $exists: false } }; // Memastikan hanya mengambil lampu tanpa streetlight_code jika tidak diberikan
-
     const existingStreetlights = await Streetlight.find(query);
 
     if (!existingStreetlights || existingStreetlights.length === 0) {
-      return res.status(404).json({ message: 'No streetlights found matching the criteria.' });
+      throw new Error('No streetlights found matching the criteria.');
     }
 
     // Membuat notifikasi untuk setiap streetlight yang ditemukan
     const notifications = await Promise.all(
       existingStreetlights.map(async (streetlight) => {
+        // Tentukan judul notifikasi berdasarkan `type`
         let title;
         const lightCode = streetlight.streetlight_code ? `${streetlight.streetlight_code}` : '';
         
@@ -77,9 +78,10 @@ const createNotification = async (req, res) => {
             title = `Lampu ${anchor_code}${lightCode} tidak dapat dinyalakan`;
             break;
           default:
-            return res.status(400).json({ message: 'Invalid type provided.' });
+            throw new Error('Invalid type provided.');
         }
 
+        // Simpan notifikasi baru ke dalam database
         const newNotification = new Notification({
           sender: 'Sistem',
           title,
@@ -88,20 +90,32 @@ const createNotification = async (req, res) => {
       })
     );
 
-    // Jika type adalah 0 atau 1, update status untuk semua streetlight yang sesuai
+    // Jika `type` adalah 0 atau 1, update status untuk semua streetlight yang sesuai
     if (type === 0 || type === 1) {
       const status = type === 0 ? 0 : 1;
-    
-      // Definisikan eventUpdate sebagai objek pencarian yang sesuai dengan anchor_code dan streetlight_code (jika ada)
-      const eventUpdate = streetlight_code 
+
+      // Definisikan query update berdasarkan `anchor_code` dan `streetlight_code` (jika ada)
+      const updateQuery = streetlight_code 
         ? { anchor_code, streetlight_code } 
         : { anchor_code };
-    
-      // Update status di Streetlight dan Event berdasarkan kriteria pencarian yang ada di query dan eventUpdate
-      await Streetlight.updateOne(query, { status });
-      await Event.updateOne(eventUpdate, { last_status: status });
-    }    
 
+      // Update status di Streetlight dan Event collections
+      await Streetlight.updateMany(query, { status });
+      await Event.updateMany(updateQuery, { last_status: status });
+    }
+
+    return notifications; // Kembalikan array notifikasi yang berhasil disimpan
+  } catch (error) {
+    console.error('Failed to create notification:', error.message);
+    throw error; // Lempar error untuk ditangani pada level yang lebih tinggi
+  }
+};
+
+// Fungsi API untuk menerima permintaan HTTP
+const createNotification = async (req, res) => {
+  try {
+    const { type, anchor_code, streetlight_code } = req.body;
+    const notifications = await createNotificationDirect(type, anchor_code, streetlight_code);
     res.status(201).json(notifications);
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
@@ -148,5 +162,6 @@ module.exports = {
   getAllNotification,
   getNotificationByCode,
   createNotification,
+  createNotificationDirect,
   getCombinedData,
 };
