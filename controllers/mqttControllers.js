@@ -23,7 +23,7 @@ const publishGetInfo = async (req, res) => {
     if (!responseReceived) {
       res.status(504).json({ message: 'Timeout: No response from control within 1.5 minutes' });
     }
-  }, 60 * 1000);
+  }, 45 * 1000);
 
   try {
     client.publish('PJU-Control', message, (error) => {
@@ -69,7 +69,7 @@ const publishTurnOn = async (req, res) => {
     if (!responseReceived) {
       res.status(504).json({ message: 'Timeout: No response from control within 1 minute' });
     }
-  }, 60 * 1000);
+  }, 45 * 1000);
 
   try {
     client.publish('PJU-Control', message, (error) => {
@@ -198,7 +198,7 @@ const publishTurnOff = async (req, res) => {
     if (!responseReceived) {
       res.status(504).json({ message: 'Timeout: No response from control within 1.5 minutes' });
     }
-  }, 60 * 1000);
+  }, 45 * 1000);
 
   try {
     client.publish('PJU-Control', message, (error) => {
