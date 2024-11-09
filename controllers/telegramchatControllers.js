@@ -30,6 +30,7 @@ const sendRepairNotification = async (anchor_code, streetlight_code, problem, lo
       parse_mode: 'Markdown',
       reply_markup: replyMarkup,
     });
+    console.log('Message sent to Telegram', message);
   } catch (error) {
     console.error('Error sending message: ', error.message);
   }
