@@ -74,6 +74,7 @@ const publishTurnOn = async (req, res) => {
     client.on('message', async (topic, message) => {
       if (topic === 'PJU-Response') {
         responseReceived = true;
+        console.log ('Response received from control', message.toString());
         client.unsubscribe('PJU-Response');
     
         const responseData = message.toString();
