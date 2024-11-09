@@ -19,30 +19,21 @@ const publishGetInfo = async (req, res) => {
 
   let responseReceived = false;
 
-  const timeout = setTimeout(() => {
-    if (!responseReceived) {
-      res.status(504).json({ message: 'Timeout: No response from control within 1.5 minutes' });
-    }
-  }, 60 * 1000);
-
   try {
     client.publish('PJU-Control', message, (error) => {
       if (error) {
-        clearTimeout(timeout);
         return res.status(500).json({ message: 'Failed to publish message', error: error.message });
       }
     });
 
     client.subscribe('PJU-Response', (err) => {
       if (err) {
-        clearTimeout(timeout);
         return res.status(500).json({ message: 'Failed to subscribe to response topic', error: err.message });
       }
     });
 
     client.on('message', (topic, message) => {
       if (topic === 'PJU-Response'){
-        clearTimeout(timeout);
         responseReceived = true;
 
         res.status(200).json({ message: 'Response received from control', data: message.toString() });
@@ -51,7 +42,6 @@ const publishGetInfo = async (req, res) => {
       }
     });
   } catch (error) {
-    clearTimeout(timeout);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
@@ -65,30 +55,22 @@ const publishTurnOn = async (req, res) => {
   }
 
   let responseReceived = false;
-  const timeout = setTimeout(() => {
-    if (!responseReceived) {
-      res.status(504).json({ message: 'Timeout: No response from control within 1 minute' });
-    }
-  }, 60 * 1000);
 
   try {
     client.publish('PJU-Control', message, (error) => {
       if (error) {
-        clearTimeout(timeout);
         return res.status(500).json({ message: 'Failed to publish message', error: error.message });
       }
     });
 
     client.subscribe('PJU-Response', (err) => {
       if (err) {
-        clearTimeout(timeout);
         return res.status(500).json({ message: 'Failed to subscribe to response topic', error: err.message });
       }
     });
 
     client.on('message', async (topic, message) => {
       if (topic === 'PJU-Response') {
-        clearTimeout(timeout);
         responseReceived = true;
         client.unsubscribe('PJU-Response');
 
@@ -147,7 +129,6 @@ const publishTurnOn = async (req, res) => {
       }
     });
   } catch (error) {
-    clearTimeout(timeout);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
@@ -194,30 +175,22 @@ const publishTurnOff = async (req, res) => {
   }
 
   let responseReceived = false;
-  const timeout = setTimeout(() => {
-    if (!responseReceived) {
-      res.status(504).json({ message: 'Timeout: No response from control within 1.5 minutes' });
-    }
-  }, 60 * 1000);
 
   try {
     client.publish('PJU-Control', message, (error) => {
       if (error) {
-        clearTimeout(timeout);
         return res.status(500).json({ message: 'Failed to publish message', error: error.message });
       }
     });
 
     client.subscribe('PJU-Response', (err) => {
       if (err) {
-        clearTimeout(timeout);
         return res.status(500).json({ message: 'Failed to subscribe to response topic', error: err.message });
       }
     });
 
     client.on('message', async (topic, message) => {
       if (topic === 'PJU-Response') {
-        clearTimeout(timeout);
         responseReceived = true;
         client.unsubscribe('PJU-Response');
 
@@ -277,7 +250,6 @@ const publishTurnOff = async (req, res) => {
       }
     });
   } catch (error) {
-    clearTimeout(timeout);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
