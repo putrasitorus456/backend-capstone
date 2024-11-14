@@ -39,28 +39,23 @@ const getNotificationByCode = async (req, res) => {
 };
 
 const createNotificationDirect = async (type, anchor_code, streetlight_code = null) => {
-  // Validasi input
   if (typeof type !== 'number' || !anchor_code) {
     throw new Error('All fields are required');
   }
 
-  // Tentukan query untuk mencari lampu berdasarkan keberadaan streetlight_code
   const query = streetlight_code 
     ? { anchor_code, streetlight_code } 
     : { anchor_code, streetlight_code: { $exists: false } };
 
   try {
-    // Cari lampu yang sesuai dengan kriteria input
     const existingStreetlights = await Streetlight.find(query);
 
     if (!existingStreetlights || existingStreetlights.length === 0) {
       throw new Error('No streetlights found matching the criteria.');
     }
 
-    // Membuat notifikasi untuk setiap streetlight yang ditemukan
     const notifications = await Promise.all(
       existingStreetlights.map(async (streetlight) => {
-        // Tentukan judul notifikasi berdasarkan `type`
         let title;
         const lightCode = streetlight.streetlight_code ? `${streetlight.streetlight_code}` : '';
         
@@ -81,7 +76,6 @@ const createNotificationDirect = async (type, anchor_code, streetlight_code = nu
             throw new Error('Invalid type provided.');
         }
 
-        // Simpan notifikasi baru ke dalam database
         const newNotification = new Notification({
           sender: 'Sistem',
           title,
@@ -90,24 +84,21 @@ const createNotificationDirect = async (type, anchor_code, streetlight_code = nu
       })
     );
 
-    // Jika `type` adalah 0 atau 1, update status untuk semua streetlight yang sesuai
     if (type === 0 || type === 1) {
       const status = type === 0 ? 0 : 1;
 
-      // Definisikan query update berdasarkan `anchor_code` dan `streetlight_code` (jika ada)
       const updateQuery = streetlight_code 
         ? { anchor_code, streetlight_code } 
         : { anchor_code };
 
-      // Update status di Streetlight dan Event collections
       await Streetlight.updateMany(query, { status });
       await Event.updateMany(updateQuery, { last_status: status });
     }
 
-    return notifications; // Kembalikan array notifikasi yang berhasil disimpan
+    return notifications;
   } catch (error) {
     console.error('Failed to create notification:', error.message);
-    throw error; // Lempar error untuk ditangani pada level yang lebih tinggi
+    throw error;
   }
 };
 
