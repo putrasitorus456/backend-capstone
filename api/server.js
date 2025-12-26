@@ -18,7 +18,17 @@ dotenv.config();
 connectDB();
 
 const app = express();
-app.use(cors());
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://fe-kamu.vercel.app",
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+  })
+);
+
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
