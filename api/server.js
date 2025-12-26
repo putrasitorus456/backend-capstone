@@ -13,6 +13,8 @@ const graphRoutes = require('../routes/graphRoutes');
 const mqttRoutes = require('../routes/mqttRoutes')
 const cron = require('node-cron');
 
+const apiKeyAuth = require('../middleware/api-auth-key');
+
 dotenv.config();
 
 connectDB();
@@ -32,6 +34,8 @@ app.use(
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
+
+app.use("/api", apiKeyAuth);
 
 app.use('/api/users', userRoutes);
 app.use('/api/responses', responsesRoutes);
