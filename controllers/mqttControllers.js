@@ -69,6 +69,7 @@ const checkRecentResponse = async (anchorCode, streetlightCode = undefined) => {
   return !!recentResponse; // Mengembalikan true jika ada data, false jika tidak
 };
 
+// PAKE INI KALO REAL CASE
 const publishTurnOn = async (req, res) => {
   const { block } = req.body;
   const message = 'ON-' + block;
@@ -154,6 +155,99 @@ const publishTurnOn = async (req, res) => {
   }
 };
 
+// PAKE INI KALO PORTFOLIO DEMO
+const publishTurnOnPortfolio = async (req, res) => {
+  const { block } = req.body;
+  const message = "ON-" + block;
+
+  if (!block) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  let responseReceived = false;
+
+  try {
+    // ✅ Buat response palsu sesuai format yang dipakai logic asli:
+    // "<prefix>-<blockNumber>-<anchorCode>-<statusString>"
+    //
+    // statusString:
+    // - digit pertama: anchorStatus (1 = OK)
+    // - 12 digit berikutnya: AB, AB1..AB11 (semua 1 = sukses)
+    //
+    // Total digit = 1 + 12 = 13
+    //
+    // Contoh: "RESP-AB-AB-1111111111111"
+    const dummyPrefix = "RESP";
+    const dummyAnchorCode = block; // karena kamu bilang block-nya AB, jadi anchorCode = AB
+    const dummyStatusString = "1" + "1".repeat(11); // 13 digit total (anchor + AB..AB11)
+
+    const responseData = `${dummyPrefix}-${block}-${dummyAnchorCode}-${dummyStatusString}`;
+
+    // -----------------------------
+    // ✅ LOGIC DI BAWAH INI SAMA PERSIS seperti handler MQTT di publishTurnOn asli
+    // -----------------------------
+    if (!responseReceived) {
+      responseReceived = true;
+
+      const dataParts = responseData.split("-");
+
+      if (dataParts.length < 4) {
+        return res.status(500).json({ message: "Invalid response format" });
+      }
+
+      const [prefix, blockNumber, anchorCode, statusString] = dataParts;
+      const anchorStatus = parseInt(statusString.charAt(0));
+      const nodeStatuses = statusString
+        .slice(1)
+        .split("")
+        .map(Number);
+
+      await createNotificationDirect(1, anchorCode);
+
+      // Cek data anchorCode sebelum proses response
+      if (anchorStatus !== 1) {
+        const alreadyProcessed = await checkRecentResponse(anchorCode);
+        if (!alreadyProcessed) {
+          const problemMapping = { 0: "komunikasi", 2: "lampu", 3: "lampu", 4: "sensor" };
+          const payloadResponse = {
+            type: 0,
+            problem: problemMapping[anchorStatus] || "unknown",
+            anchor_code: anchorCode,
+          };
+          await processResponse(payloadResponse);
+        }
+      }
+
+      for (let i = 0; i < nodeStatuses.length; i++) {
+        const streetlightCode = i + 1;
+
+        await createNotificationDirect(1, anchorCode, streetlightCode);
+
+        if (nodeStatuses[i] !== 1) {
+          const alreadyProcessed = await checkRecentResponse(anchorCode, streetlightCode);
+          if (!alreadyProcessed) {
+            const problemMapping = { 0: "komunikasi", 2: "lampu", 3: "lampu", 4: "sensor" };
+            const payloadResponse = {
+              type: 0,
+              problem: problemMapping[nodeStatuses[i]] || "unknown",
+              anchor_code: anchorCode,
+              streetlight_code: streetlightCode,
+            };
+            await processResponse(payloadResponse);
+          }
+        }
+      }
+
+      return res.status(200).json({ message: "Response received from control", data: responseData });
+    }
+  } catch (error) {
+    if (!responseReceived) {
+      return res.status(500).json({ message: "Server Error", error: error.message });
+    }
+  }
+};
+
+// PAKE INI KALO REAL CASE
 const publishTurnOff = async (req, res) => {
   const { block } = req.body;
   const message = 'OFF-' + block;
@@ -239,8 +333,102 @@ const publishTurnOff = async (req, res) => {
   }
 };
 
+// PAKE INI KALO PORTFOLIO DEMO
+const publishTurnOffPortfolio = async (req, res) => {
+  const { block } = req.body;
+  const message = "OFF-" + block;
+
+  if (!block) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  let responseReceived = false; // Flag untuk memastikan respons hanya dikirim sekali
+
+  try {
+    // ✅ Dummy response sesuai format response MQTT asli:
+    // "<prefix>-<blockNumber>-<anchorCode>-<statusString>"
+    //
+    // Untuk OFF:
+    // - anchorStatus sukses = 2 (sesuai logic kamu: if (anchorStatus !== 2) ...)
+    // - nodeStatus sukses = 2 (sesuai logic kamu: if (nodeStatuses[i] !== 2) ...)
+    //
+    // Block AB punya 12 lampu: AB + AB1..AB11
+    // Jadi total digit statusString = 1 (anchor) + 12 (node) = 13 digit
+    const dummyPrefix = "RESP";
+    const dummyAnchorCode = block; // misal block = AB, maka anchorCode = AB
+
+    const dummyStatusString = "2" + "2".repeat(11); // 13 digit total (anchor + AB..AB11)
+    const responseData = `${dummyPrefix}-${block}-${dummyAnchorCode}-${dummyStatusString}`;
+
+    // -----------------------------
+    // ✅ LOGIC DI BAWAH INI SAMA PERSIS seperti handler MQTT di publishTurnOff asli
+    // -----------------------------
+    if (!responseReceived) {
+      responseReceived = true;
+
+      const dataParts = responseData.split("-");
+
+      if (dataParts.length < 4) {
+        return res.status(500).json({ message: "Invalid response format" });
+      }
+
+      const [prefix, blockNumber, anchorCode, statusString] = dataParts;
+      const anchorStatus = parseInt(statusString.charAt(0));
+      const nodeStatuses = statusString
+        .slice(1)
+        .split("")
+        .map(Number);
+
+      await createNotificationDirect(0, anchorCode);
+
+      // Cek data anchorCode sebelum proses response
+      if (anchorStatus !== 2) {
+        const alreadyProcessed = await checkRecentResponse(anchorCode);
+        if (!alreadyProcessed) {
+          const problemMapping = { 0: "komunikasi", 1: "lampu", 3: "lampu", 4: "sensor" };
+          const payloadResponse = {
+            type: 0,
+            problem: problemMapping[anchorStatus] || "unknown",
+            anchor_code: anchorCode,
+          };
+          await processResponse(payloadResponse);
+        }
+      }
+
+      for (let i = 0; i < nodeStatuses.length; i++) {
+        const streetlightCode = i + 1;
+
+          await createNotificationDirect(0, anchorCode, streetlightCode);
+
+        if (nodeStatuses[i] !== 2) {
+          const alreadyProcessed = await checkRecentResponse(anchorCode, streetlightCode);
+          if (!alreadyProcessed) {
+            const problemMapping = { 0: "komunikasi", 1: "lampu", 3: "lampu", 4: "sensor" };
+            const payloadResponse = {
+              type: 0,
+              problem: problemMapping[nodeStatuses[i]] || "unknown",
+              anchor_code: anchorCode,
+              streetlight_code: streetlightCode,
+            };
+            await processResponse(payloadResponse);
+          }
+        }
+      }
+
+      return res.status(200).json({ message: "Response received from control", data: responseData });
+    }
+  } catch (error) {
+    // Jika terjadi error sebelum respons dikirim, pastikan kita mengirim respons error
+    if (!responseReceived) {
+      return res.status(500).json({ message: "Server Error", error: error.message });
+    }
+  }
+};
+
 module.exports = {
   publishGetInfo,
   publishTurnOn,
+  publishTurnOnPortfolio,
   publishTurnOff,
+  publishTurnOffPortfolio,
 };

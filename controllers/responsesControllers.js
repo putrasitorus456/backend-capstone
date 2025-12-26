@@ -114,10 +114,8 @@ const processResponse = async ({ type, problem, anchor_code, streetlight_code })
     await updateEvent(anchor_code, streetlight_code, problem, 0);
     if (streetlight_code) {
       await sendMessage(anchor_code, streetlight_code, problem, location);
-      console.log('Sent message for', anchor_code, streetlight_code);
     } else {
       await sendMessage(anchor_code, null, problem, location);
-      console.log('Sent message for', anchor_code);
     }
   } else {
     await updateEvent(anchor_code, streetlight_code, '', 0);
